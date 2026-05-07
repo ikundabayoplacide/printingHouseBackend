@@ -1,0 +1,9 @@
+node_modules/
+.env
+logs/
+uploads/designs/*
+uploads/invoices/*
+!uploads/designs/.gitkeep
+!uploads/invoices/.gitkeep
+prisma/migrations/
+dist
