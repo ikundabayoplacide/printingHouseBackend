@@ -16,8 +16,8 @@ router.use(authenticate);
 
 router.get('/', getAllCustomers);
 router.get('/:id', getCustomerById);
-router.post('/', authorize('ADMIN', 'STAFF'), createCustomerValidation, validate, createCustomer);
-router.put('/:id', authorize('ADMIN', 'STAFF'), updateCustomerValidation, validate, updateCustomer);
+router.post('/', authorize('ADMIN', 'RECEPTIONIST'), createCustomerValidation, validate, createCustomer);
+router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALESMANAGER'), updateCustomerValidation, validate, updateCustomer);
 router.delete('/:id', authorize('ADMIN'), deleteCustomer);
 
 module.exports = router;

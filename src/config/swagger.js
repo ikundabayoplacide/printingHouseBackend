@@ -32,7 +32,7 @@ const options = {
             name: { type: 'string', example: 'John Doe' },
             email: { type: 'string', format: 'email', example: 'john@printinghouse.com' },
             password: { type: 'string', minLength: 6, example: 'secret123' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'STAFF', 'CUSTOMER'], example: 'STAFF' },
+            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'], example: 'PRINTEMPLOYEE' },
           },
         },
         ChangePasswordRequest: {
@@ -50,7 +50,7 @@ const options = {
             id: { type: 'string', format: 'uuid' },
             name: { type: 'string', example: 'John Doe' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'STAFF', 'CUSTOMER'] },
+            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -63,7 +63,7 @@ const options = {
             name: { type: 'string', example: 'Jane Doe' },
             email: { type: 'string', format: 'email', example: 'jane@printinghouse.com' },
             password: { type: 'string', minLength: 6, example: 'secret123' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'STAFF', 'CUSTOMER'], example: 'STAFF' },
+            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'], example: 'PRINTEMPLOYEE' },
           },
         },
         UpdateUserRequest: {
@@ -71,7 +71,7 @@ const options = {
           properties: {
             name: { type: 'string', example: 'Jane Doe' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'STAFF', 'CUSTOMER'] },
+            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] },
             isActive: { type: 'boolean' },
           },
         },
@@ -88,6 +88,7 @@ const options = {
             city: { type: 'string', example: 'Kigali' },
             country: { type: 'string', example: 'Rwanda' },
             notes: { type: 'string' },
+            type: { type: 'string', enum: ['BUSINESS', 'VISITOR'], example: 'BUSINESS' },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -105,6 +106,7 @@ const options = {
             city: { type: 'string', example: 'Kigali' },
             country: { type: 'string', example: 'Rwanda' },
             notes: { type: 'string' },
+            type: { type: 'string', enum: ['BUSINESS', 'VISITOR'], example: 'BUSINESS', description: 'BUSINESS triggers a notification to Sales Managers' },
           },
         },
         UpdateCustomerRequest: {
@@ -118,6 +120,7 @@ const options = {
             city: { type: 'string' },
             country: { type: 'string' },
             notes: { type: 'string' },
+            type: { type: 'string', enum: ['BUSINESS', 'VISITOR'] },
             isActive: { type: 'boolean' },
           },
         },
@@ -156,6 +159,144 @@ const options = {
             basePrice: { type: 'number', format: 'float' },
             unit: { type: 'string' },
             isActive: { type: 'boolean' },
+          },
+        },
+        // ── Department ───────────────────────────────────────────────────────
+        Department: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Printing' },
+            description: { type: 'string', nullable: true, example: 'Handles all printing operations.' },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateDepartmentRequest: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', example: 'Printing' },
+            description: { type: 'string', example: 'Handles all printing operations.' },
+          },
+        },
+        UpdateDepartmentRequest: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Printing' },
+            description: { type: 'string', example: 'Handles all printing operations.' },
+            isActive: { type: 'boolean' },
+          },
+        },
+        // ── Job ──────────────────────────────────────────────────────────────
+        Job: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            jobNumber: { type: 'string', example: 'JOB-2026-001' },
+            title: { type: 'string', example: 'Business Cards for Acme Corp' },
+            description: { type: 'string', example: '500 double-sided business cards' },
+            jobType: { type: 'string', example: 'business-card' },
+            quantity: { type: 'integer', example: 500 },
+            size: { type: 'string', example: 'A4' },
+            colorMode: { type: 'string', example: 'full-color' },
+            bindingType: { type: 'string', example: 'none' },
+            status: {
+              type: 'string',
+              enum: [
+                'pending', 'confirmed', 'in-composition', 'in-montage',
+                'in-printing', 'in-binding', 'in-packaging', 'quality-check',
+                'ready-for-delivery', 'delivered', 'completed',
+              ],
+              example: 'pending',
+            },
+            priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], example: 'normal' },
+            dueDate: { type: 'string', format: 'date-time', nullable: true },
+            notes: { type: 'string', nullable: true },
+            customerId: { type: 'string', format: 'uuid' },
+            createdById: { type: 'string', format: 'uuid' },
+            departmentAssignedToId: { type: 'string', format: 'uuid', nullable: true },
+            customer: { $ref: '#/components/schemas/Customer' },
+            createdBy: { $ref: '#/components/schemas/User' },
+            departmentAssignedTo: { $ref: '#/components/schemas/Department' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateJobRequest: {
+          type: 'object',
+          required: ['title', 'customerId'],
+          properties: {
+            title: { type: 'string', example: 'Business Cards for Acme Corp' },
+            description: { type: 'string', example: '500 double-sided business cards' },
+            jobType: { type: 'string', example: 'business-card' },
+            quantity: { type: 'integer', minimum: 1, example: 500 },
+            size: { type: 'string', example: 'A4' },
+            colorMode: { type: 'string', example: 'full-color' },
+            bindingType: { type: 'string', example: 'none' },
+            priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], example: 'normal' },
+            dueDate: { type: 'string', format: 'date-time' },
+            notes: { type: 'string' },
+            customerId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...' },
+          },
+        },
+        UpdateJobRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            jobType: { type: 'string' },
+            quantity: { type: 'integer', minimum: 1 },
+            size: { type: 'string' },
+            colorMode: { type: 'string' },
+            bindingType: { type: 'string' },
+            priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'] },
+            dueDate: { type: 'string', format: 'date-time' },
+            notes: { type: 'string' },
+            departmentAssignedToId: { type: 'string', format: 'uuid', nullable: true },
+          },
+        },
+        UpdateJobStatusRequest: {
+          type: 'object',
+          required: ['status'],
+          properties: {
+            status: {
+              type: 'string',
+              enum: [
+                'confirmed', 'in-composition', 'in-montage', 'in-printing',
+                'in-binding', 'in-packaging', 'quality-check',
+                'ready-for-delivery', 'delivered', 'completed',
+              ],
+              example: 'confirmed',
+            },
+          },
+        },
+        AssignJobRequest: {
+          type: 'object',
+          required: ['departmentAssignedToId'],
+          properties: {
+            departmentAssignedToId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...', description: 'ID of the department to assign this job to' },
+          },
+        },
+        // ── Notification ─────────────────────────────────────────────────────
+        Notification: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string', example: 'Job Assigned' },
+            message: { type: 'string', example: 'Job JOB-2026-001 has been assigned to Binding department.' },
+            type: {
+              type: 'string',
+              enum: ['JOB_CREATED', 'JOB_ASSIGNED', 'JOB_STATUS_CHANGED', 'DEPARTMENT_ASSIGNED', 'GENERAL'],
+              example: 'JOB_ASSIGNED',
+            },
+            isRead: { type: 'boolean', example: false },
+            relatedEntityType: { type: 'string', nullable: true, example: 'job' },
+            relatedEntityId: { type: 'string', format: 'uuid', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
           },
         },
         // ── Shared ───────────────────────────────────────────────────────────
@@ -199,6 +340,9 @@ const options = {
       { name: 'Users', description: 'User management (Admin only)' },
       { name: 'Customers', description: 'Customer management' },
       { name: 'Products', description: 'Product catalogue management' },
+      { name: 'Departments', description: 'Department management' },
+      { name: 'Jobs', description: 'Job registration and workflow management' },
+      { name: 'Notifications', description: 'User notifications' },
     ],
     paths: {
       // ── Auth ───────────────────────────────────────────────────────────────
@@ -293,7 +437,7 @@ const options = {
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name or email' },
-            { in: 'query', name: 'role', schema: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'STAFF', 'CUSTOMER'] } },
+            { in: 'query', name: 'role', schema: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] } },
           ],
           responses: {
             200: {
@@ -359,6 +503,7 @@ const options = {
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name, email, company or phone' },
+            { in: 'query', name: 'type', schema: { type: 'string', enum: ['BUSINESS', 'VISITOR'] }, description: 'Filter by customer type' },
           ],
           responses: {
             200: { description: 'Paginated list of customers', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Customer' } } } }] } } } },
@@ -455,6 +600,308 @@ const options = {
           responses: {
             200: { description: 'Product deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
             404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Departments ────────────────────────────────────────────────────────
+      '/api/departments': {
+        get: {
+          tags: ['Departments'],
+          summary: 'Get all departments (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name or description' },
+            { in: 'query', name: 'all', schema: { type: 'boolean' }, description: 'If true, include inactive departments' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of departments', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Department' } } } }] } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Departments'],
+          summary: 'Create a new department (Admin only)',
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateDepartmentRequest' } } } },
+          responses: {
+            201: { description: 'Department created successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Department' } } }] } } } },
+            409: { description: 'Department name already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/departments/{id}': {
+        get: {
+          tags: ['Departments'],
+          summary: 'Get a department by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Department data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Department' } } }] } } } },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Departments'],
+          summary: 'Update a department (Admin only)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateDepartmentRequest' } } } },
+          responses: {
+            200: { description: 'Department updated successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Department' } } }] } } } },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Departments'],
+          summary: 'Delete a department (soft delete, Admin only)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Department deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/departments/{id}/jobs': {
+        get: {
+          tags: ['Departments'],
+          summary: 'Get all jobs assigned to a department',
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Department ID' },
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
+          ],
+          responses: {
+            200: {
+              description: 'Paginated list of jobs for the department',
+              content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Job' } } } }] } } },
+            },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Jobs ───────────────────────────────────────────────────────────────
+      '/api/jobs/number/{jobNumber}': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Get a job by its job number (e.g. JOB-2026-001)',
+          parameters: [
+            { in: 'path', name: 'jobNumber', required: true, schema: { type: 'string' }, example: 'JOB-2026-001', description: 'Human-readable job number' },
+          ],
+          responses: {
+            200: { description: 'Job data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Job' } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/next-number': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Preview the next auto-generated job number',
+          responses: {
+            200: {
+              description: 'Next job number',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { jobNumber: { type: 'string', example: 'JOB-2026-001' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/jobs': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Get all jobs (paginated, filterable)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
+            { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'assignedToId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'departmentAssignedToId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by assigned department' },
+          ],
+          responses: {
+            200: {
+              description: 'Paginated list of jobs',
+              content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Job' } } } }] } } },
+            },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Jobs'],
+          summary: 'Register a new job for a customer',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateJobRequest' } } },
+          },
+          responses: {
+            201: {
+              description: 'Job registered successfully',
+              content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Job' } } }] } } },
+            },
+            404: { description: 'Customer not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Get a job by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Job data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Job' } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Jobs'],
+          summary: 'Update job details',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateJobRequest' } } } },
+          responses: {
+            200: { description: 'Job updated successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Job' } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Jobs'],
+          summary: 'Delete a job (only pending or confirmed jobs)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Job deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job cannot be deleted in its current status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/status': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Advance job to the next status',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateJobStatusRequest' } } } },
+          responses: {
+            200: {
+              description: 'Job status updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, status: { type: 'string' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Invalid status transition', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/assign': {
+        post: {
+          tags: ['Jobs'],
+          summary: 'Assign a job to a department',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignJobRequest' } } } },
+          responses: {
+            200: {
+              description: 'Job assigned to department successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, departmentAssignedTo: { $ref: '#/components/schemas/Department' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job or department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Notifications ──────────────────────────────────────────────────────
+      '/api/notifications': {
+        get: {
+          tags: ['Notifications'],
+          summary: 'Get my notifications (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'unreadOnly', schema: { type: 'boolean' }, description: 'If true, return only unread notifications' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of notifications', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Notification' } } } }] } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Notifications'],
+          summary: 'Delete all my notifications',
+          responses: {
+            200: { description: 'All notifications deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/notifications/unread-count': {
+        get: {
+          tags: ['Notifications'],
+          summary: 'Get count of unread notifications',
+          responses: {
+            200: {
+              description: 'Unread count',
+              content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'object', properties: { unreadCount: { type: 'integer', example: 5 } } } } }] } } },
+            },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/notifications/read-all': {
+        patch: {
+          tags: ['Notifications'],
+          summary: 'Mark all notifications as read',
+          responses: {
+            200: { description: 'All notifications marked as read', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/notifications/{id}/read': {
+        patch: {
+          tags: ['Notifications'],
+          summary: 'Mark a single notification as read',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Notification marked as read', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Notification' } } }] } } } },
+            404: { description: 'Notification not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/notifications/{id}': {
+        delete: {
+          tags: ['Notifications'],
+          summary: 'Delete a single notification',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Notification deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Notification not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

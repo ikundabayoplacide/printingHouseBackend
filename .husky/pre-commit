@@ -1,0 +1,8 @@
+#!/bin/sh
+echo "🔍 Running lint check before commit..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Lint failed. Fix the errors above before committing."
+  exit 1
+fi
+echo "✅ Lint passed."

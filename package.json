@@ -10,7 +10,10 @@
     "db:migrate:undo": "sequelize-cli db:migrate:undo:all",
     "db:seed": "sequelize-cli db:seed:all",
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
-    "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all"
+    "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
+    "db:reset:force": "node scripts/db-reset-force.js",
+    "build": "eslint src/ server.js --ext .js",
+    "build:fix": "eslint src/ server.js --ext .js --fix"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -30,6 +33,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
     "nodemon": "^3.0.3",
     "sequelize-cli": "^6.6.5"
   }

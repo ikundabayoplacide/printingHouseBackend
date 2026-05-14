@@ -1,4 +1,7 @@
 node_modules/
+prompt/
+.kiro/
+package-lock.json
 .env
 logs/
 uploads/designs/*

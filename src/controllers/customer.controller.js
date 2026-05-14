@@ -1,7 +1,9 @@
 const { Op } = require('sequelize');
 const Customer = require('../database/models/Customer');
+const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
+const notify = require('../utils/notification.service');
 
 /**
  * GET /api/customers
@@ -9,9 +11,11 @@ const { getPagination } = require('../utils/helpers');
 const getAllCustomers = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { search } = req.query;
+    const { search, type } = req.query;
 
     const where = { isActive: true };
+    if (type) where.type = type;
+
     if (search) {
       where[Op.or] = ['name', 'email', 'company', 'phone'].map((field) => ({
         [field]: { [Op.iLike]: `%${search}%` },
@@ -38,7 +42,6 @@ const getCustomerById = async (req, res, next) => {
   try {
     const customer = await Customer.findByPk(req.params.id);
     if (!customer) return error(res, 'Customer not found.', 404);
-
     return success(res, customer);
   } catch (err) {
     next(err);
@@ -47,15 +50,40 @@ const getCustomerById = async (req, res, next) => {
 
 /**
  * POST /api/customers
+ * If type is BUSINESS, notify all SALESMANAGER users.
  */
 const createCustomer = async (req, res, next) => {
   try {
-    const { name, email, phone, company, address, city, country, notes } = req.body;
+    const { name, email, phone, company, address, city, country, notes, type } = req.body;
 
     const existing = await Customer.findOne({ where: { email } });
     if (existing) return error(res, 'A customer with this email already exists.', 409);
 
-    const customer = await Customer.create({ name, email, phone, company, address, city, country, notes });
+    const customer = await Customer.create({
+      name, email, phone, company, address, city, country, notes,
+      type: type || 'VISITOR',
+    });
+
+    // Notify all SALESMANAGER users when a BUSINESS customer registers
+    if (customer.type === 'BUSINESS') {
+      const salesManagers = await User.findAll({
+        where: { role: 'SALESMANAGER', isActive: true },
+        attributes: ['id'],
+      });
+
+      await Promise.all(
+        salesManagers.map((sm) =>
+          notify(
+            sm.id,
+            'New Business Customer Registered',
+            `A new business customer "${name}"${company ? ` from ${company}` : ''} has been registered and needs a meeting.`,
+            'GENERAL',
+            'customer',
+            customer.id
+          )
+        )
+      );
+    }
 
     return success(res, customer, 'Customer created successfully.', 201);
   } catch (err) {
@@ -71,7 +99,7 @@ const updateCustomer = async (req, res, next) => {
     const customer = await Customer.findByPk(req.params.id);
     if (!customer) return error(res, 'Customer not found.', 404);
 
-    const { name, email, phone, company, address, city, country, notes, isActive } = req.body;
+    const { name, email, phone, company, address, city, country, notes, isActive, type } = req.body;
 
     await customer.update({
       ...(name !== undefined && { name }),
@@ -83,6 +111,7 @@ const updateCustomer = async (req, res, next) => {
       ...(country !== undefined && { country }),
       ...(notes !== undefined && { notes }),
       ...(isActive !== undefined && { isActive }),
+      ...(type !== undefined && { type }),
     });
 
     return success(res, customer, 'Customer updated successfully.');
@@ -100,7 +129,6 @@ const deleteCustomer = async (req, res, next) => {
     if (!customer) return error(res, 'Customer not found.', 404);
 
     await customer.update({ isActive: false });
-
     return success(res, null, 'Customer deleted successfully.');
   } catch (err) {
     next(err);

@@ -53,6 +53,11 @@ Customer.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    type: {
+      type: DataTypes.ENUM('BUSINESS', 'VISITOR'),
+      defaultValue: 'VISITOR',
+      allowNull: false,
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

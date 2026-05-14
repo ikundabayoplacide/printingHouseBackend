@@ -43,8 +43,17 @@ User.init(
       },
     },
     role: {
-      type: DataTypes.ENUM('ADMIN', 'STAFF', 'CUSTOMER','SUPERVISOR'),
-      defaultValue: 'STAFF',
+      type: DataTypes.ENUM(
+        'ADMIN',
+        'SUPERVISOR',
+        'SALESMANAGER',
+        'RECEPTIONIST',
+        'DAF',
+        'ACCOUNTANT',
+        'STOREKEEPER',
+        'PRINTEMPLOYEE'
+      ),
+      defaultValue: 'PRINTEMPLOYEE',
       allowNull: false,
     },
     isActive: {
@@ -58,13 +67,7 @@ User.init(
     modelName: 'User',
     tableName: 'users',
     timestamps: true,
-    // Never return password by default
-    defaultScope: {
-      attributes: { exclude: ['password'] },
-    },
-    scopes: {
-      withPassword: { attributes: {} },
-    },
+
     hooks: {
       beforeSave: async (user) => {
         if (user.changed('password')) {

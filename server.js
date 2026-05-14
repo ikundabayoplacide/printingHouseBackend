@@ -11,11 +11,17 @@ const { errorHandler, notFound } = require('./src/middlewares/error.middleware')
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./src/config/swagger');
 
+// Register model associations before routes are loaded
+require('./src/database/models/associations');
+
 // Route imports
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
 const customerRoutes = require('./src/routes/customer.routes');
 const productRoutes = require('./src/routes/product.routes');
+const departmentRoutes = require('./src/routes/department.routes');
+const jobRoutes = require('./src/routes/job.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
 
 const app = express();
 
@@ -46,6 +52,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use(notFound);

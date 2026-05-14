@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable('departments', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -13,29 +13,11 @@ module.exports = {
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-      },
-      email: {
-        type: Sequelize.STRING,
-        allowNull: false,
         unique: true,
       },
-      password: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      role: {
-        type: Sequelize.ENUM(
-          'ADMIN',
-          'SUPERVISOR',
-          'SALESMANAGER',
-          'RECEPTIONIST',
-          'DAF',
-          'ACCOUNTANT',
-          'STOREKEEPER',
-          'PRINTEMPLOYEE'
-        ),
-        defaultValue: 'PRINTEMPLOYEE',
-        allowNull: false,
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true,
       },
       isActive: {
         type: Sequelize.BOOLEAN,
@@ -54,12 +36,11 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('users', ['email'], { unique: true });
-    await queryInterface.addIndex('users', ['role']);
+    await queryInterface.addIndex('departments', ['name'], { unique: true });
+    await queryInterface.addIndex('departments', ['isActive']);
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('users');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_users_role";');
+    await queryInterface.dropTable('departments');
   },
 };

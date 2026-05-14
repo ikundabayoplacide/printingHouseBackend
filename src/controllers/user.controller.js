@@ -1,5 +1,4 @@
 const { Op } = require('sequelize');
-const bcrypt = require('bcryptjs');
 const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
@@ -46,6 +45,7 @@ const getAllUsers = async (req, res, next) => {
 
     const { count, rows } = await User.findAndCountAll({
       where,
+      attributes: { exclude: ['password'] },
       offset: skip,
       limit,
       order: [['createdAt', 'DESC']],
@@ -62,7 +62,9 @@ const getAllUsers = async (req, res, next) => {
  */
 const getUserById = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] },
+    });
     if (!user) return error(res, 'User not found.', 404);
 
     return success(res, user);
@@ -76,7 +78,9 @@ const getUserById = async (req, res, next) => {
  */
 const updateUser = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] },
+    });
     if (!user) return error(res, 'User not found.', 404);
 
     const { name, email, role, isActive } = req.body;
@@ -99,7 +103,9 @@ const updateUser = async (req, res, next) => {
  */
 const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] },
+    });
     if (!user) return error(res, 'User not found.', 404);
 
     await user.update({ isActive: false });

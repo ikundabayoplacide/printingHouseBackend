@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../database/models/User');
 const env = require('../config/env');
@@ -15,7 +14,7 @@ const register = async (req, res, next) => {
     const existing = await User.findOne({ where: { email } });
     if (existing) return error(res, 'Email already in use.', 409);
 
-    const user = await User.create({ name, email, password, role: role || 'STAFF' });
+    const user = await User.create({ name, email, password, role: role || 'PRINTEMPLOYEE' });
 
     return success(
       res,
@@ -61,7 +60,9 @@ const login = async (req, res, next) => {
  */
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password'] },
+    });
     if (!user) return error(res, 'User not found.', 404);
 
     return success(res, user);
@@ -77,6 +78,7 @@ const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
+    // Use withPassword scope so the hash is available for comparison
     const user = await User.findByPk(req.user.id);
     if (!user) return error(res, 'User not found.', 404);
 
