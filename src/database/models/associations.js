@@ -9,6 +9,10 @@ const Job = require('./Job');
 const Department = require('./Department');
 const Notification = require('./Notification');
 
+// User → Department
+User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
+
 // Job → Customer
 Job.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
 Customer.hasMany(Job, { foreignKey: 'customerId', as: 'jobs' });
@@ -16,10 +20,6 @@ Customer.hasMany(Job, { foreignKey: 'customerId', as: 'jobs' });
 // Job → User (creator)
 Job.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(Job, { foreignKey: 'createdById', as: 'createdJobs' });
-
-// Job → User (assignee)
-Job.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' });
-User.hasMany(Job, { foreignKey: 'assignedToId', as: 'assignedJobs' });
 
 // Job → Department (assigned to)
 Job.belongsTo(Department, { foreignKey: 'departmentAssignedToId', as: 'departmentAssignedTo' });

@@ -100,7 +100,7 @@ const createJob = async (req, res, next) => {
     const {
       title, description, jobType, quantity, size,
       colorMode, bindingType, priority, dueDate, notes,
-      customerId,
+      customerId, amount,
     } = req.body;
 
     const customer = await Customer.findOne({ where: { id: customerId, isActive: true } });
@@ -111,7 +111,7 @@ const createJob = async (req, res, next) => {
     const job = await Job.create({
       jobNumber, title, description, jobType, quantity, size,
       colorMode, bindingType, priority: priority || 'normal',
-      dueDate, notes, customerId,
+      dueDate, notes, customerId, amount,
       createdById: req.user.id,
     });
 
@@ -152,7 +152,7 @@ const updateJob = async (req, res, next) => {
     const {
       title, description, jobType, quantity, size,
       colorMode, bindingType, priority, dueDate, notes,
-      departmentAssignedToId,
+      departmentAssignedToId, amount,
     } = req.body;
 
     if (departmentAssignedToId) {
@@ -171,6 +171,7 @@ const updateJob = async (req, res, next) => {
       ...(priority !== undefined && { priority }),
       ...(dueDate !== undefined && { dueDate }),
       ...(notes !== undefined && { notes }),
+      ...(amount !== undefined && { amount }),
       ...(departmentAssignedToId !== undefined && { departmentAssignedToId }),
     });
 
@@ -291,8 +292,188 @@ const assignJob = async (req, res, next) => {
 };
 
 /**
- * DELETE /api/jobs/:id
+ * PATCH /api/jobs/:id/payment
+ * Mark a job as paid. Restricted to ADMIN, DAF, ACCOUNTANT.
  */
+const markJobAsPaid = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (job.paymentStatus === 'paid') {
+      return error(res, 'Job is already marked as paid.', 409);
+    }
+
+    const { paymentMethod, paymentNote } = req.body;
+
+    if (!paymentMethod) {
+      return error(res, 'paymentMethod is required.', 400);
+    }
+
+    const validMethods = ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'];
+    if (!validMethods.includes(paymentMethod)) {
+      return error(res, `paymentMethod must be one of: ${validMethods.join(', ')}.`, 400);
+    }
+
+    await job.update({ paymentStatus: 'paid', paymentMethod, paymentNote: paymentNote || null, paidAt: new Date() });
+
+    // Notify all ADMIN and DAF users
+    const recipients = await User.findAll({
+      where: { role: ['ADMIN', 'DAF'], isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      recipients.map((u) =>
+        notify(
+          u.id,
+          'Payment Received',
+          `Payment for job ${job.jobNumber} ("${job.title}") has been recorded.`,
+          'PAYMENT_RECEIVED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(res, {
+      id: job.id,
+      jobNumber: job.jobNumber,
+      paymentStatus: 'paid',
+      paidAt: job.paidAt,
+    }, 'Job marked as paid.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/jobs/:id/complete
+ * Mark a job as completed. Only allowed if current status is 'delivered'.
+ */
+const completeJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (job.status === 'completed') {
+      return error(res, 'Job is already completed.', 409);
+    }
+
+    if (job.status === 'delivered') {
+      return error(res, 'Job is already delivered and cannot be changed.', 422);
+    }
+
+    await job.update({ status: 'completed' });
+
+    const recipients = await User.findAll({
+      where: { role: ['ADMIN', 'SUPERVISOR'], isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      recipients.map((u) =>
+        notify(
+          u.id,
+          'Job Completed',
+          `Job ${job.jobNumber} ("${job.title}") has been marked as completed.`,
+          'JOB_STATUS_CHANGED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(res, {
+      id: job.id,
+      jobNumber: job.jobNumber,
+      status: 'completed',
+    }, 'Job marked as completed.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/jobs/completed-and-paid
+ * Fetch all jobs whose status is 'completed' AND paymentStatus is 'paid'.
+ */
+const getCompletedAndPaidJobs = async (req, res, next) => {
+  try {
+    const { page, limit, skip } = getPagination(req.query);
+    const { search } = req.query;
+
+    const where = { status: 'completed', paymentStatus: 'paid' };
+
+    if (search) {
+      where[Op.or] = [
+        { jobNumber: { [Op.iLike]: `%${search}%` } },
+        { title: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { count, rows } = await Job.findAndCountAll({
+      where,
+      offset: skip,
+      limit,
+      order: [['paidAt', 'DESC']],
+      include: jobIncludes,
+    });
+
+    return paginated(res, rows, count, page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/jobs/:id/deliver
+ * Mark a job as delivered. Only allowed if current status is 'ready-for-delivery'.
+ */
+const deliverJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (job.status === 'delivered') {
+      return error(res, 'Job is already marked as delivered.', 409);
+    }
+
+    if (job.status !== 'completed') {
+      return error(res, `Job cannot be delivered from status '${job.status}'. It must be 'completed' first.`, 422);
+    }
+
+    await job.update({ status: 'delivered' });
+
+    // Notify all ADMIN and SUPERVISOR users
+    const recipients = await User.findAll({
+      where: { role: ['ADMIN', 'SUPERVISOR'], isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      recipients.map((u) =>
+        notify(
+          u.id,
+          'Job Delivered',
+          `Job ${job.jobNumber} ("${job.title}") has been marked as delivered.`,
+          'JOB_STATUS_CHANGED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(res, {
+      id: job.id,
+      jobNumber: job.jobNumber,
+      status: 'delivered',
+    }, 'Job marked as delivered.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteJob = async (req, res, next) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -357,6 +538,10 @@ module.exports = {
   updateJob,
   updateJobStatus,
   assignJob,
+  markJobAsPaid,
+  completeJob,
+  deliverJob,
+  getCompletedAndPaidJobs,
   deleteJob,
   getJobsByDepartment,
 };

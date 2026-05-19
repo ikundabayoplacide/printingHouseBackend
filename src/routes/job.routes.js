@@ -10,6 +10,10 @@ const {
   updateJob,
   updateJobStatus,
   assignJob,
+  markJobAsPaid,
+  completeJob,
+  deliverJob,
+  getCompletedAndPaidJobs,
   deleteJob,
 } = require('../controllers/job.controller');
 
@@ -34,16 +38,20 @@ router.get('/next-number', getNextJobNumber);
 router.get('/number/:jobNumber', getJobByNumber);
 
 // List & create
+router.get('/completed-and-paid', getCompletedAndPaidJobs);
 router.get('/', getAllJobs);
-router.post('/', authorize('ADMIN', 'RECEPTIONIST'), createJobValidation, validate, createJob);
+router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), createJobValidation, validate, createJob);
 
 // Single job CRUD
 router.get('/:id', getJobById);
-router.put('/:id', authorize('ADMIN', 'RECEPTIONIST'), updateJobValidation, validate, updateJob);
+router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), updateJobValidation, validate, updateJob);
 router.delete('/:id', authorize('ADMIN'), deleteJob);
 
 // Workflow actions
-router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'PRINTEMPLOYEE', 'SUPERVISOR'), updateJobStatusValidation, validate, updateJobStatus);
-router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR'), assignJobValidation, validate, assignJob);
+router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRINTEMPLOYEE', 'SUPERVISOR'), updateJobStatusValidation, validate, updateJobStatus);
+router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES'), assignJobValidation, validate, assignJob);
+router.patch('/:id/payment', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'RECEPTIONIST', 'SALES'), markJobAsPaid);
+router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES'), deliverJob);
+router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES'), completeJob);
 
 module.exports = router;

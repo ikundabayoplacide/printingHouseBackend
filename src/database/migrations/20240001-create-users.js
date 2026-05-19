@@ -23,24 +23,41 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      phone: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      departmentId: {
+        type: Sequelize.UUID,
+        allowNull: true,
+      },
+      gender: {
+        type: Sequelize.ENUM('MALE', 'FEMALE', 'OTHER'),
+        allowNull: true,
+      },
       role: {
         type: Sequelize.ENUM(
           'ADMIN',
-          'SUPERVISOR',
-          'SALESMANAGER',
           'RECEPTIONIST',
+          'SALES',
           'DAF',
           'ACCOUNTANT',
-          'STOREKEEPER',
-          'PRINTEMPLOYEE'
+          'PRODUCTION_MANAGER',
+          'STOCK',
+          'SUPERVISOR',
+          'WORKER'
         ),
-        defaultValue: 'PRINTEMPLOYEE',
+        defaultValue: 'WORKER',
         allowNull: false,
       },
       isActive: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false,
+      },
+      deletedAt: {
+        type: Sequelize.DATE,
+        allowNull: true,
       },
       createdAt: {
         type: Sequelize.DATE,

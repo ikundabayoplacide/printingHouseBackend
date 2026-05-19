@@ -33,6 +33,7 @@ module.exports = {
           'JOB_ASSIGNED',
           'JOB_STATUS_CHANGED',
           'DEPARTMENT_ASSIGNED',
+          'PAYMENT_RECEIVED',
           'GENERAL'
         ),
         defaultValue: 'GENERAL',

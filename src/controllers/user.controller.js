@@ -9,16 +9,16 @@ const { getPagination } = require('../utils/helpers');
  */
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, departmentId, gender } = req.body;
 
     const existing = await User.findOne({ where: { email } });
     if (existing) return error(res, 'Email already in use.', 409);
 
-    const user = await User.create({ name, email, password, role: role });
+    const user = await User.create({ name, email, password, role, phone, departmentId, gender });
 
     return success(
       res,
-      { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt },
+      { id: user.id, name: user.name, email: user.email, phone: user.phone, gender: user.gender, role: user.role, departmentId: user.departmentId, isActive: user.isActive, createdAt: user.createdAt },
       'User created successfully.',
       201
     );
@@ -83,13 +83,16 @@ const updateUser = async (req, res, next) => {
     });
     if (!user) return error(res, 'User not found.', 404);
 
-    const { name, email, role, isActive } = req.body;
+    const { name, email, role, isActive, phone, departmentId, gender } = req.body;
 
     await user.update({
       ...(name !== undefined && { name }),
       ...(email !== undefined && { email }),
       ...(role !== undefined && { role }),
       ...(isActive !== undefined && { isActive }),
+      ...(phone !== undefined && { phone }),
+      ...(departmentId !== undefined && { departmentId }),
+      ...(gender !== undefined && { gender }),
     });
 
     return success(res, user, 'User updated successfully.');
@@ -99,18 +102,16 @@ const updateUser = async (req, res, next) => {
 };
 
 /**
- * DELETE /api/users/:id  (soft delete)
+ * DELETE /api/users/:id  (soft delete via paranoid)
  */
 const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id, {
-      attributes: { exclude: ['password'] },
-    });
+    const user = await User.findByPk(req.params.id);
     if (!user) return error(res, 'User not found.', 404);
 
-    await user.update({ isActive: false });
+    await user.destroy(); // sets deletedAt timestamp (paranoid soft delete)
 
-    return success(res, null, 'User deactivated successfully.');
+    return success(res, null, 'User deleted successfully.');
   } catch (err) {
     next(err);
   }

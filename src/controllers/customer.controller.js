@@ -54,13 +54,13 @@ const getCustomerById = async (req, res, next) => {
  */
 const createCustomer = async (req, res, next) => {
   try {
-    const { name, email, phone, company, address, city, country, notes, type } = req.body;
+    const { name, email, phone, company, address, notes, type } = req.body;
 
     const existing = await Customer.findOne({ where: { email } });
     if (existing) return error(res, 'A customer with this email already exists.', 409);
 
     const customer = await Customer.create({
-      name, email, phone, company, address, city, country, notes,
+      name, email, phone, company, address, notes,
       type: type || 'VISITOR',
     });
 
@@ -99,7 +99,7 @@ const updateCustomer = async (req, res, next) => {
     const customer = await Customer.findByPk(req.params.id);
     if (!customer) return error(res, 'Customer not found.', 404);
 
-    const { name, email, phone, company, address, city, country, notes, isActive, type } = req.body;
+    const { name, email, phone, company, address, notes, isActive, type } = req.body;
 
     await customer.update({
       ...(name !== undefined && { name }),
@@ -107,8 +107,6 @@ const updateCustomer = async (req, res, next) => {
       ...(phone !== undefined && { phone }),
       ...(company !== undefined && { company }),
       ...(address !== undefined && { address }),
-      ...(city !== undefined && { city }),
-      ...(country !== undefined && { country }),
       ...(notes !== undefined && { notes }),
       ...(isActive !== undefined && { isActive }),
       ...(type !== undefined && { type }),

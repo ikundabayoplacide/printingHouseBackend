@@ -29,6 +29,7 @@ const createJobValidation = [
     .withMessage('Priority must be one of: low, normal, high, urgent'),
   body('dueDate').optional().isISO8601().withMessage('Due date must be a valid ISO 8601 date'),
   body('notes').optional().trim(),
+  body('amount').optional().isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
 ];
 
 const updateJobValidation = [
@@ -45,6 +46,7 @@ const updateJobValidation = [
     .withMessage('Priority must be one of: low, normal, high, urgent'),
   body('dueDate').optional().isISO8601().withMessage('Due date must be a valid ISO 8601 date'),
   body('notes').optional().trim(),
+  body('amount').optional().isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
   body('departmentAssignedToId').optional().isUUID().withMessage('departmentAssignedToId must be a valid UUID'),
 ];
 

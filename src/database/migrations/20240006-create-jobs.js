@@ -78,6 +78,27 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true,
       },
+      amount: {
+        type: Sequelize.DECIMAL(12, 2),
+        allowNull: true,
+      },
+      paymentStatus: {
+        type: Sequelize.ENUM('unpaid', 'paid'),
+        defaultValue: 'unpaid',
+        allowNull: false,
+      },
+      paymentMethod: {
+        type: Sequelize.ENUM('CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'),
+        allowNull: true,
+      },
+      paymentNote: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
+      paidAt: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
       // The department this job is assigned to
       departmentAssignedToId: {
         type: Sequelize.UUID,

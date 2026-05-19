@@ -32,7 +32,8 @@ const options = {
             name: { type: 'string', example: 'John Doe' },
             email: { type: 'string', format: 'email', example: 'john@printinghouse.com' },
             password: { type: 'string', minLength: 6, example: 'secret123' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'], example: 'PRINTEMPLOYEE' },
+            phone: { type: 'string', example: '+250788000001' },
+            role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'], example: 'WORKER' },
           },
         },
         ChangePasswordRequest: {
@@ -50,7 +51,10 @@ const options = {
             id: { type: 'string', format: 'uuid' },
             name: { type: 'string', example: 'John Doe' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] },
+            phone: { type: 'string', example: '+250788000001', nullable: true },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'], nullable: true },
+            role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] },
+            departmentId: { type: 'string', format: 'uuid', nullable: true },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -63,7 +67,10 @@ const options = {
             name: { type: 'string', example: 'Jane Doe' },
             email: { type: 'string', format: 'email', example: 'jane@printinghouse.com' },
             password: { type: 'string', minLength: 6, example: 'secret123' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'], example: 'PRINTEMPLOYEE' },
+            phone: { type: 'string', example: '+250788000001' },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'], example: 'MALE' },
+            departmentId: { type: 'string', format: 'uuid', example: 'aaaaaaaa-0001-4000-a000-000000000001' },
+            role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'], example: 'WORKER' },
           },
         },
         UpdateUserRequest: {
@@ -71,7 +78,10 @@ const options = {
           properties: {
             name: { type: 'string', example: 'Jane Doe' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] },
+            phone: { type: 'string', example: '+250788000001' },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'] },
+            departmentId: { type: 'string', format: 'uuid', nullable: true },
+            role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] },
             isActive: { type: 'boolean' },
           },
         },
@@ -85,8 +95,6 @@ const options = {
             phone: { type: 'string', example: '+250788000001' },
             company: { type: 'string', example: 'Acme Corp' },
             address: { type: 'string', example: 'KG 123 St' },
-            city: { type: 'string', example: 'Kigali' },
-            country: { type: 'string', example: 'Rwanda' },
             notes: { type: 'string' },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR'], example: 'BUSINESS' },
             isActive: { type: 'boolean' },
@@ -103,8 +111,6 @@ const options = {
             phone: { type: 'string', example: '+250788000001' },
             company: { type: 'string', example: 'Acme Corp' },
             address: { type: 'string', example: 'KG 123 St' },
-            city: { type: 'string', example: 'Kigali' },
-            country: { type: 'string', example: 'Rwanda' },
             notes: { type: 'string' },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR'], example: 'BUSINESS', description: 'BUSINESS triggers a notification to Sales Managers' },
           },
@@ -117,8 +123,6 @@ const options = {
             phone: { type: 'string' },
             company: { type: 'string' },
             address: { type: 'string' },
-            city: { type: 'string' },
-            country: { type: 'string' },
             notes: { type: 'string' },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR'] },
             isActive: { type: 'boolean' },
@@ -202,6 +206,11 @@ const options = {
             size: { type: 'string', example: 'A4' },
             colorMode: { type: 'string', example: 'full-color' },
             bindingType: { type: 'string', example: 'none' },
+            amount: { type: 'number', format: 'float', example: 150.00, nullable: true },
+            paymentStatus: { type: 'string', enum: ['unpaid', 'paid'], example: 'unpaid' },
+            paymentMethod: { type: 'string', enum: ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'], nullable: true },
+            paymentNote: { type: 'string', nullable: true },
+            paidAt: { type: 'string', format: 'date-time', nullable: true },
             status: {
               type: 'string',
               enum: [
@@ -235,6 +244,7 @@ const options = {
             size: { type: 'string', example: 'A4' },
             colorMode: { type: 'string', example: 'full-color' },
             bindingType: { type: 'string', example: 'none' },
+            amount: { type: 'number', format: 'float', minimum: 0, example: 150.00 },
             priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], example: 'normal' },
             dueDate: { type: 'string', format: 'date-time' },
             notes: { type: 'string' },
@@ -251,6 +261,7 @@ const options = {
             size: { type: 'string' },
             colorMode: { type: 'string' },
             bindingType: { type: 'string' },
+            amount: { type: 'number', format: 'float', minimum: 0 },
             priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'] },
             dueDate: { type: 'string', format: 'date-time' },
             notes: { type: 'string' },
@@ -437,7 +448,7 @@ const options = {
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name or email' },
-            { in: 'query', name: 'role', schema: { type: 'string', enum: ['ADMIN', 'SUPERVISOR', 'SALESMANAGER', 'RECEPTIONIST', 'DAF', 'ACCOUNTANT', 'STOREKEEPER', 'PRINTEMPLOYEE'] } },
+            { in: 'query', name: 'role', schema: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] } },
           ],
           responses: {
             200: {
@@ -486,10 +497,10 @@ const options = {
         },
         delete: {
           tags: ['Users'],
-          summary: 'Deactivate a user (soft delete)',
+          summary: 'Soft delete a user (sets deletedAt)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           responses: {
-            200: { description: 'User deactivated successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            200: { description: 'User deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
             404: { description: 'User not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
@@ -833,6 +844,122 @@ const options = {
               },
             },
             404: { description: 'Job or department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/completed-and-paid': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Get all completed and paid jobs (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of completed and paid jobs', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Job' } } } }] } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/deliver': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Mark a job as delivered (must be in completed status)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Job marked as delivered',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, status: { type: 'string', example: 'delivered' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Job already delivered', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job not in completed status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/complete': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Mark a job as completed (can be called from any active status)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Job marked as completed',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, status: { type: 'string', example: 'completed' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Job already completed', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job not in delivered status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/payment': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Mark a job as paid (ADMIN, DAF, ACCOUNTANT, RECEPTIONIST)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['paymentMethod'],
+                  properties: {
+                    paymentMethod: { type: 'string', enum: ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'], example: 'CASH' },
+                    paymentNote: { type: 'string', example: 'Paid via MTN Mobile Money', description: 'Optional note about the payment' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Job marked as paid',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              jobNumber: { type: 'string' },
+                              paymentStatus: { type: 'string', enum: ['unpaid', 'paid'] },
+                              paidAt: { type: 'string', format: 'date-time' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Job already paid', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

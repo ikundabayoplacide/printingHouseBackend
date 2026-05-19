@@ -6,8 +6,6 @@ const createCustomerValidation = [
   body('phone').optional().trim(),
   body('company').optional().trim(),
   body('address').optional().trim(),
-  body('city').optional().trim(),
-  body('country').optional().trim(),
   body('notes').optional().trim(),
   body('type').optional().isIn(['BUSINESS', 'VISITOR']).withMessage('Type must be BUSINESS or VISITOR'),
 ];
@@ -18,8 +16,6 @@ const updateCustomerValidation = [
   body('phone').optional().trim(),
   body('company').optional().trim(),
   body('address').optional().trim(),
-  body('city').optional().trim(),
-  body('country').optional().trim(),
   body('notes').optional().trim(),
   body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
 ];

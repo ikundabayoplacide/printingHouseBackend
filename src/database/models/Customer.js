@@ -41,14 +41,6 @@ Customer.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    city: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    country: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,

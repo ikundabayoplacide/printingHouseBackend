@@ -42,18 +42,34 @@ User.init(
         len: { args: [6, 255], msg: 'Password must be at least 6 characters' },
       },
     },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: { args: [7, 20], msg: 'Phone number must be between 7 and 20 characters' },
+      },
+    },
+    departmentId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.ENUM('MALE', 'FEMALE', 'OTHER'),
+      allowNull: true,
+    },
     role: {
       type: DataTypes.ENUM(
         'ADMIN',
-        'SUPERVISOR',
-        'SALESMANAGER',
         'RECEPTIONIST',
+        'SALES',
         'DAF',
         'ACCOUNTANT',
-        'STOREKEEPER',
-        'PRINTEMPLOYEE'
+        'PRODUCTION_MANAGER',
+        'STOCK',
+        'SUPERVISOR',
+        'WORKER'
       ),
-      defaultValue: 'PRINTEMPLOYEE',
+      defaultValue: 'WORKER',
       allowNull: false,
     },
     isActive: {
@@ -61,12 +77,17 @@ User.init(
       defaultValue: true,
       allowNull: false,
     },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     sequelize,
     modelName: 'User',
     tableName: 'users',
     timestamps: true,
+    paranoid: true, // enables soft delete via deletedAt
 
     hooks: {
       beforeSave: async (user) => {

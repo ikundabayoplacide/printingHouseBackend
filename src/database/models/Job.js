@@ -102,6 +102,30 @@ Job.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      validate: {
+        min: { args: [0], msg: 'Amount must be a positive number' },
+      },
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM('unpaid', 'paid'),
+      defaultValue: 'unpaid',
+      allowNull: false,
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'),
+      allowNull: true,
+    },
+    paymentNote: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    paidAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     departmentAssignedToId: {
       type: DataTypes.UUID,
       allowNull: true,
