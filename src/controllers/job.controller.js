@@ -4,6 +4,9 @@ const Customer = require('../database/models/Customer');
 const User = require('../database/models/User');
 const Department = require('../database/models/Department');
 const Payment = require('../database/models/Payment');
+const JobItem = require('../database/models/JobItem');
+const StockItem = require('../database/models/StockItem');
+const Quotation = require('../database/models/Quotation');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 const notify = require('../utils/notification.service');
@@ -14,6 +17,7 @@ const jobIncludes = [
   { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'role'] },
   { model: Department, as: 'departmentAssignedTo', attributes: ['id', 'name'] },
   { model: Payment, as: 'payments', attributes: ['id', 'paymentMethod', 'paymentState', 'amountPaid', 'balance', 'receiptNo', 'paidAt'] },
+  { model: JobItem, as: 'jobItems', include: [{ model: StockItem, as: 'stockItem', attributes: ['id', 'itemName', 'category', 'unit', 'currentStock'] }] },
 ];
 
 /**
@@ -102,11 +106,23 @@ const createJob = async (req, res, next) => {
     const {
       title, description, jobType, quantity, size,
       colorMode, bindingType, priority, dueDate, notes,
-      customerId, amount,
+      customerId, amount, items,
     } = req.body;
 
     const customer = await Customer.findOne({ where: { id: customerId, isActive: true } });
     if (!customer) return error(res, 'Customer not found or inactive.', 404);
+
+    // Validate items if provided
+    if (items && items.length > 0) {
+      for (const item of items) {
+        const stockItem = await StockItem.findByPk(item.stockItemId);
+        if (!stockItem) return error(res, `Stock item ${item.stockItemId} not found.`, 404);
+        if (!stockItem.isActive) return error(res, `Stock item "${stockItem.itemName}" is inactive.`, 422);
+        if (parseFloat(item.quantityNeeded) > parseFloat(stockItem.currentStock)) {
+          return error(res, `Insufficient stock for "${stockItem.itemName}". Available: ${stockItem.currentStock} ${stockItem.unit || ''}, requested: ${item.quantityNeeded}.`, 422);
+        }
+      }
+    }
 
     const jobNumber = await Job.generateJobNumber();
 
@@ -116,6 +132,20 @@ const createJob = async (req, res, next) => {
       dueDate, notes, customerId, amount,
       createdById: req.user.id,
     });
+
+    // Create job items if provided
+    if (items && items.length > 0) {
+      await Promise.all(
+        items.map((item) =>
+          JobItem.create({
+            jobId: job.id,
+            stockItemId: item.stockItemId,
+            quantityNeeded: item.quantityNeeded,
+            notes: item.notes || null,
+          })
+        )
+      );
+    }
 
     // Notify all SUPERVISOR users (production managers)
     const supervisors = await User.findAll({
@@ -136,8 +166,6 @@ const createJob = async (req, res, next) => {
       )
     );
 
-    const created = await Job.findByPk(job.id, { include: jobIncludes });
-
     // Auto-create a pending payment record if job has an amount
     if (amount) {
       await Payment.create({
@@ -155,6 +183,23 @@ const createJob = async (req, res, next) => {
       });
     }
 
+    // Auto-create a draft quotation
+    const quotationNo = await Quotation.generateQuotationNo();
+    const sub = parseFloat(amount || 0);
+    await Quotation.create({
+      quotationNo,
+      jobId: job.id,
+      customerId: job.customerId,
+      createdById: req.user.id,
+      subtotal: sub,
+      taxRate: 0,
+      taxAmount: 0,
+      discount: 0,
+      totalAmount: sub,
+      status: 'draft',
+    });
+
+    const created = await Job.findByPk(job.id, { include: jobIncludes });
     return success(res, created, 'Job registered successfully.', 201);
   } catch (err) {
     next(err);
@@ -407,7 +452,13 @@ const deliverJob = async (req, res, next) => {
       return error(res, `Job cannot be delivered from status '${job.status}'. It must be 'completed' first.`, 422);
     }
 
-    await job.update({ status: 'delivered' });
+    const { deliveredByName, deliveredByContact } = req.body;
+
+    await job.update({
+      status: 'delivered',
+      ...(deliveredByName !== undefined && { deliveredByName }),
+      ...(deliveredByContact !== undefined && { deliveredByContact }),
+    });
 
     // Notify all ADMIN and SUPERVISOR users
     const recipients = await User.findAll({

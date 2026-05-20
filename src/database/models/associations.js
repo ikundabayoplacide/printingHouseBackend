@@ -9,6 +9,15 @@ const Job = require('./Job');
 const Department = require('./Department');
 const Notification = require('./Notification');
 const Payment = require('./Payment');
+const BoutiqueCategory = require('./BoutiqueCategory');
+const BoutiqueProduct = require('./BoutiqueProduct');
+const BoutiqueStockMovement = require('./BoutiqueStockMovement');
+const StockItem = require('./StockItem');
+const StockEntry = require('./StockEntry');
+const StockSortie = require('./StockSortie');
+const JobItem = require('./JobItem');
+const Quotation = require('./Quotation');
+const CustomerVisit = require('./CustomerVisit');
 
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
@@ -46,4 +55,68 @@ User.hasMany(Payment, { foreignKey: 'receivedById', as: 'receivedPayments' });
 Payment.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
 User.hasMany(Payment, { foreignKey: 'verifiedById', as: 'verifiedPayments' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment };
+// BoutiqueProduct → BoutiqueCategory
+BoutiqueProduct.belongsTo(BoutiqueCategory, { foreignKey: 'categoryId', as: 'category' });
+BoutiqueCategory.hasMany(BoutiqueProduct, { foreignKey: 'categoryId', as: 'products' });
+
+// BoutiqueStockMovement → BoutiqueProduct
+BoutiqueStockMovement.belongsTo(BoutiqueProduct, { foreignKey: 'productId', as: 'product' });
+BoutiqueProduct.hasMany(BoutiqueStockMovement, { foreignKey: 'productId', as: 'stockMovements' });
+
+// BoutiqueStockMovement → User
+BoutiqueStockMovement.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
+User.hasMany(BoutiqueStockMovement, { foreignKey: 'changedById', as: 'stockMovements' });
+
+// StockItem → StockEntry
+StockEntry.belongsTo(StockItem, { foreignKey: 'stockItemId', as: 'stockItem' });
+StockItem.hasMany(StockEntry, { foreignKey: 'stockItemId', as: 'entries' });
+
+// StockEntry → User (received by)
+StockEntry.belongsTo(User, { foreignKey: 'receivedById', as: 'receivedBy' });
+User.hasMany(StockEntry, { foreignKey: 'receivedById', as: 'stockEntries' });
+
+// StockSortie → StockItem
+StockSortie.belongsTo(StockItem, { foreignKey: 'stockItemId', as: 'stockItem' });
+StockItem.hasMany(StockSortie, { foreignKey: 'stockItemId', as: 'sorties' });
+
+// StockSortie → User (requester)
+StockSortie.belongsTo(User, { foreignKey: 'requesterId', as: 'requester' });
+User.hasMany(StockSortie, { foreignKey: 'requesterId', as: 'requestedSorties' });
+
+// StockSortie → User (approved by)
+StockSortie.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+User.hasMany(StockSortie, { foreignKey: 'approvedById', as: 'approvedSorties' });
+
+// StockSortie → Job
+StockSortie.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(StockSortie, { foreignKey: 'jobId', as: 'stockSorties' });
+
+// JobItem → Job
+JobItem.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(JobItem, { foreignKey: 'jobId', as: 'jobItems' });
+
+// JobItem → StockItem
+JobItem.belongsTo(StockItem, { foreignKey: 'stockItemId', as: 'stockItem' });
+StockItem.hasMany(JobItem, { foreignKey: 'stockItemId', as: 'jobItems' });
+
+// Quotation → Job
+Quotation.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(Quotation, { foreignKey: 'jobId', as: 'quotations' });
+
+// Quotation → Customer
+Quotation.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Customer.hasMany(Quotation, { foreignKey: 'customerId', as: 'quotations' });
+
+// Quotation → User (created by)
+Quotation.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+User.hasMany(Quotation, { foreignKey: 'createdById', as: 'quotations' });
+
+// CustomerVisit → Customer
+CustomerVisit.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Customer.hasMany(CustomerVisit, { foreignKey: 'customerId', as: 'visits' });
+
+// CustomerVisit → User (recorded by)
+CustomerVisit.belongsTo(User, { foreignKey: 'recordedById', as: 'recordedBy' });
+User.hasMany(CustomerVisit, { foreignKey: 'recordedById', as: 'recordedVisits' });
+
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit };

@@ -19,23 +19,31 @@ Customer.init(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
       validate: {
         isEmail: { msg: 'Must be a valid email address' },
-        notEmpty: { msg: 'Email is required' },
       },
       set(value) {
-        this.setDataValue('email', value.toLowerCase().trim());
+        if (value) this.setDataValue('email', value.toLowerCase().trim());
       },
     },
     phone: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
+      validate: {
+        notEmpty: { msg: 'Phone number is required' },
+        len: { args: [7, 20], msg: 'Phone number must be between 7 and 20 characters' },
+      },
     },
     company: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    tin: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Tax Identification Number for company customers',
     },
     address: {
       type: DataTypes.STRING,

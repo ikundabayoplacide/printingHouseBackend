@@ -114,6 +114,16 @@ Job.init(
       defaultValue: 'unpaid',
       allowNull: false,
     },
+    deliveredByName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Name of person who received the delivery',
+    },
+    deliveredByContact: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Contact of person who received the delivery',
+    },
     departmentAssignedToId: {
       type: DataTypes.UUID,
       allowNull: true,

@@ -23,8 +23,8 @@ const connectDB = async () => {
     await sequelize.authenticate();
     logger.info('PostgreSQL connected successfully.');
 
-    // Sync all models (alter: true updates columns without dropping data)
-    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    // Models are managed via migrations — no auto-sync needed
+    await sequelize.authenticate();
     logger.info('Database models synchronized.');
   } catch (error) {
     logger.error(`PostgreSQL connection error: ${error.message}`);

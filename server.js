@@ -21,8 +21,13 @@ const customerRoutes = require('./src/routes/customer.routes');
 const productRoutes = require('./src/routes/product.routes');
 const departmentRoutes = require('./src/routes/department.routes');
 const jobRoutes = require('./src/routes/job.routes');
+const visitRoutes = require('./src/routes/visit.routes');
+const quotationRoutes = require('./src/routes/quotation.routes');
+const jobItemRoutes = require('./src/routes/jobItem.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
+const boutiqueRoutes = require('./src/routes/boutique.routes');
+const stockRoutes = require('./src/routes/stock.routes');
 
 const app = express();
 
@@ -55,8 +60,13 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/jobs', jobRoutes);
+app.use('/api/jobs/:jobId/items', jobItemRoutes);
+app.use('/api/quotations', quotationRoutes);
+app.use('/api/visits', visitRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/boutique', boutiqueRoutes);
+app.use('/api/stock', stockRoutes);
 
 // 404 handler
 app.use(notFound);

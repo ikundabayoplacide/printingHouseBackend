@@ -91,11 +91,12 @@ const options = {
           properties: {
             id: { type: 'string', format: 'uuid' },
             name: { type: 'string', example: 'Alice Mutoni' },
-            email: { type: 'string', format: 'email' },
-            phone: { type: 'string', example: '+250788000001' },
-            company: { type: 'string', example: 'Acme Corp' },
-            address: { type: 'string', example: 'KG 123 St' },
-            notes: { type: 'string' },
+            email: { type: 'string', format: 'email', nullable: true },
+            phone: { type: 'string', example: '+250788000001', nullable: true },
+            company: { type: 'string', example: 'Acme Corp', nullable: true },
+            tin: { type: 'string', example: '123456789', nullable: true, description: 'Tax Identification Number for company customers' },
+            address: { type: 'string', example: 'KG 123 St', nullable: true },
+            notes: { type: 'string', nullable: true },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR', 'BOUTIQUE'], example: 'BUSINESS' },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
@@ -104,12 +105,13 @@ const options = {
         },
         CreateCustomerRequest: {
           type: 'object',
-          required: ['name', 'email'],
+          required: ['name', 'phone'],
           properties: {
             name: { type: 'string', example: 'Alice Mutoni' },
-            email: { type: 'string', format: 'email', example: 'alice@acmecorp.rw' },
-            phone: { type: 'string', example: '+250788000001' },
+            email: { type: 'string', format: 'email', example: 'alice@acmecorp.rw', description: 'Optional' },
+            phone: { type: 'string', example: '+250788000001', description: 'Required. Include country code e.g. +250788000001' },
             company: { type: 'string', example: 'Acme Corp' },
+            tin: { type: 'string', example: '123456789', description: 'TIN number for company customers' },
             address: { type: 'string', example: 'KG 123 St' },
             notes: { type: 'string' },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR', 'BOUTIQUE'], example: 'BUSINESS', description: 'BUSINESS or BOUTIQUE triggers a notification to Sales Managers' },
@@ -122,6 +124,7 @@ const options = {
             email: { type: 'string', format: 'email' },
             phone: { type: 'string' },
             company: { type: 'string' },
+            tin: { type: 'string' },
             address: { type: 'string' },
             notes: { type: 'string' },
             type: { type: 'string', enum: ['BUSINESS', 'VISITOR', 'BOUTIQUE'] },
@@ -208,6 +211,8 @@ const options = {
             bindingType: { type: 'string', example: 'none' },
             amount: { type: 'number', format: 'float', example: 150.00, nullable: true },
             paymentStatus: { type: 'string', enum: ['unpaid', 'paid'], example: 'unpaid' },
+            deliveredByName: { type: 'string', nullable: true, example: 'John Doe' },
+            deliveredByContact: { type: 'string', nullable: true, example: '+250788000001' },
             receiptNo: { type: 'string', example: 'RCP-2026-001', nullable: true },
             paymentMethod: { type: 'string', enum: ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD'], nullable: true },
             paymentNote: { type: 'string', nullable: true },
@@ -250,6 +255,19 @@ const options = {
             dueDate: { type: 'string', format: 'date-time' },
             notes: { type: 'string' },
             customerId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...' },
+            items: {
+              type: 'array',
+              description: 'Stock items needed for this job',
+              items: {
+                type: 'object',
+                required: ['stockItemId', 'quantityNeeded'],
+                properties: {
+                  stockItemId: { type: 'string', format: 'uuid' },
+                  quantityNeeded: { type: 'number', minimum: 0.01, example: 5 },
+                  notes: { type: 'string', nullable: true },
+                },
+              },
+            },
           },
         },
         UpdateJobRequest: {
@@ -348,6 +366,200 @@ const options = {
             updatedAt: { type: 'string', format: 'date-time' },
           },
         },
+        // ── CustomerVisit ─────────────────────────────────────────────────────
+        CustomerVisit: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            customerId: { type: 'string', format: 'uuid' },
+            recordedById: { type: 'string', format: 'uuid' },
+            type: { type: 'string', enum: ['IN', 'OUT'], example: 'IN' },
+            checkinAt: { type: 'string', format: 'date-time' },
+            checkoutAt: { type: 'string', format: 'date-time', nullable: true },
+            purpose: { type: 'string', nullable: true, example: 'Job pickup' },
+            notes: { type: 'string', nullable: true },
+            customer: { $ref: '#/components/schemas/Customer' },
+            recordedBy: { $ref: '#/components/schemas/User' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Quotation ─────────────────────────────────────────────────────────
+        Quotation: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            quotationNo: { type: 'string', example: 'QT-2026-001' },
+            jobId: { type: 'string', format: 'uuid' },
+            customerId: { type: 'string', format: 'uuid' },
+            createdById: { type: 'string', format: 'uuid' },
+            subtotal: { type: 'number', format: 'float', example: 150000 },
+            taxRate: { type: 'number', format: 'float', example: 18 },
+            taxAmount: { type: 'number', format: 'float', example: 27000 },
+            discount: { type: 'number', format: 'float', example: 0 },
+            totalAmount: { type: 'number', format: 'float', example: 177000 },
+            status: { type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'], example: 'draft' },
+            validUntil: { type: 'string', format: 'date-time', nullable: true },
+            notes: { type: 'string', nullable: true },
+            terms: { type: 'string', nullable: true },
+            job: { $ref: '#/components/schemas/Job' },
+            customer: { $ref: '#/components/schemas/Customer' },
+            createdBy: { $ref: '#/components/schemas/User' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── JobItem ───────────────────────────────────────────────────────────
+        JobItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            jobId: { type: 'string', format: 'uuid' },
+            stockItemId: { type: 'string', format: 'uuid' },
+            quantityNeeded: { type: 'number', format: 'float', example: 5 },
+            quantityUsed: { type: 'number', format: 'float', nullable: true, example: 4.5 },
+            notes: { type: 'string', nullable: true },
+            stockItem: { $ref: '#/components/schemas/StockItem' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Stock ─────────────────────────────────────────────────────────────
+        StockItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            itemName: { type: 'string', example: 'A4 Paper Reams' },
+            category: { type: 'string', example: 'Paper', nullable: true },
+            unit: { type: 'string', example: 'reams', nullable: true },
+            description: { type: 'string', nullable: true },
+            supplier: { type: 'string', nullable: true },
+            unitCost: { type: 'number', format: 'float', nullable: true },
+            currentStock: { type: 'number', format: 'float', example: 50 },
+            alarmStock: { type: 'number', format: 'float', example: 10 },
+            stockStatus: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'], example: 'in-stock' },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        StockEntry: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            stockItemId: { type: 'string', format: 'uuid' },
+            receivedById: { type: 'string', format: 'uuid' },
+            quantityIn: { type: 'number', format: 'float', example: 20 },
+            unitCost: { type: 'number', format: 'float', nullable: true },
+            totalCost: { type: 'number', format: 'float', nullable: true },
+            supplier: { type: 'string', nullable: true },
+            referenceNo: { type: 'string', nullable: true },
+            notes: { type: 'string', nullable: true },
+            stockBefore: { type: 'number', format: 'float' },
+            stockAfter: { type: 'number', format: 'float' },
+            entryDate: { type: 'string', format: 'date-time' },
+            stockItem: { $ref: '#/components/schemas/StockItem' },
+            receivedBy: { $ref: '#/components/schemas/User' },
+          },
+        },
+        StockSortie: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            stockItemId: { type: 'string', format: 'uuid' },
+            requesterId: { type: 'string', format: 'uuid' },
+            approvedById: { type: 'string', format: 'uuid', nullable: true },
+            jobId: { type: 'string', format: 'uuid', nullable: true },
+            dossierNo: { type: 'string', nullable: true, example: 'JOB-2026-001' },
+            quantityOut: { type: 'number', format: 'float', example: 5 },
+            reason: { type: 'string', nullable: true },
+            notes: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['pending', 'approved', 'rejected'], example: 'pending' },
+            stockBefore: { type: 'number', format: 'float' },
+            stockAfter: { type: 'number', format: 'float' },
+            sortieDate: { type: 'string', format: 'date-time' },
+            stockItem: { $ref: '#/components/schemas/StockItem' },
+            requester: { $ref: '#/components/schemas/User' },
+            approvedBy: { $ref: '#/components/schemas/User' },
+            job: { $ref: '#/components/schemas/Job' },
+          },
+        },
+        // ── Boutique ─────────────────────────────────────────────────────────
+        BoutiqueCategory: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Printing' },
+            skuPrefix: { type: 'string', example: 'PRN' },
+            colorClass: { type: 'string', example: 'bg-blue-100', nullable: true },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        BoutiqueProduct: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            sku: { type: 'string', example: 'PRN-001' },
+            name: { type: 'string', example: 'Business Cards' },
+            description: { type: 'string', nullable: true },
+            categoryId: { type: 'string', format: 'uuid' },
+            unit: { type: 'string', example: 'per 100', nullable: true },
+            price: { type: 'number', format: 'float', example: 5000 },
+            stock: { type: 'integer', example: 100 },
+            minStock: { type: 'integer', example: 10 },
+            status: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'], example: 'in-stock' },
+            isActive: { type: 'boolean' },
+            category: { $ref: '#/components/schemas/BoutiqueCategory' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        BoutiqueStockMovement: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            changedById: { type: 'string', format: 'uuid' },
+            change: { type: 'integer', example: 50, description: 'Positive = restock, negative = sale/use' },
+            reason: { type: 'string', example: 'restock' },
+            stockBefore: { type: 'integer', example: 50 },
+            stockAfter: { type: 'integer', example: 100 },
+            changedBy: { $ref: '#/components/schemas/User' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateBoutiqueCategoryRequest: {
+          type: 'object',
+          required: ['name', 'skuPrefix'],
+          properties: {
+            name: { type: 'string', example: 'Printing' },
+            skuPrefix: { type: 'string', example: 'PRN' },
+            colorClass: { type: 'string', example: 'bg-blue-100' },
+          },
+        },
+        CreateBoutiqueProductRequest: {
+          type: 'object',
+          required: ['name', 'categoryId', 'price'],
+          properties: {
+            name: { type: 'string', example: 'Business Cards' },
+            description: { type: 'string' },
+            categoryId: { type: 'string', format: 'uuid' },
+            unit: { type: 'string', example: 'per 100' },
+            price: { type: 'number', format: 'float', minimum: 0, example: 5000 },
+            stock: { type: 'integer', minimum: 0, example: 100 },
+            minStock: { type: 'integer', minimum: 0, example: 10 },
+          },
+        },
+        UpdateStockRequest: {
+          type: 'object',
+          required: ['change', 'reason'],
+          properties: {
+            change: { type: 'integer', example: 50, description: 'Positive = restock, negative = sale/use' },
+            reason: { type: 'string', example: 'restock' },
+          },
+        },
         // ── Shared ───────────────────────────────────────────────────────────
         PaginatedResponse: {
           type: 'object',
@@ -392,6 +604,10 @@ const options = {
       { name: 'Departments', description: 'Department management' },
       { name: 'Jobs', description: 'Job registration and workflow management' },
       { name: 'Payments', description: 'Payment recording and management' },
+      { name: 'Boutique', description: 'Boutique product and stock management' },
+      { name: 'Stock', description: 'Internal stock/inventory management' },
+      { name: 'Quotations', description: 'Quotation management' },
+      { name: 'Visits', description: 'Customer visit check-in/check-out tracking' },
       { name: 'Notifications', description: 'User notifications' },
     ],
     paths: {
@@ -905,6 +1121,20 @@ const options = {
           tags: ['Jobs'],
           summary: 'Mark a job as delivered (must be in completed status)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    deliveredByName: { type: 'string', example: 'John Doe', description: 'Name of person who received the delivery' },
+                    deliveredByContact: { type: 'string', example: '+250788000001', description: 'Contact of person who received the delivery' },
+                  },
+                },
+              },
+            },
+          },
           responses: {
             200: {
               description: 'Job marked as delivered',
@@ -1000,6 +1230,527 @@ const options = {
           responses: {
             200: { description: 'Payment data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Payment' } } }] } } } },
             404: { description: 'Payment not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Visits ─────────────────────────────────────────────────────────────
+      '/api/visits': {
+        get: {
+          tags: ['Visits'],
+          summary: 'Get all customer visits (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'type', schema: { type: 'string', enum: ['IN', 'OUT'] } },
+            { in: 'query', name: 'date', schema: { type: 'string', format: 'date' }, description: 'Filter by date e.g. 2026-05-20' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of visits', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/CustomerVisit' } } } }] } } } },
+          },
+        },
+      },
+      '/api/visits/checkin': {
+        post: {
+          tags: ['Visits'],
+          summary: 'Check in a customer (ADMIN, RECEPTIONIST)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['customerId'],
+                  properties: {
+                    customerId: { type: 'string', format: 'uuid' },
+                    purpose: { type: 'string', example: 'Job pickup', nullable: true },
+                    notes: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Customer checked in', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/CustomerVisit' } } }] } } } },
+            404: { description: 'Customer not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/visits/customer/{customerId}': {
+        get: {
+          tags: ['Visits'],
+          summary: 'Get all visits for a specific customer',
+          parameters: [
+            { in: 'path', name: 'customerId', required: true, schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+          ],
+          responses: {
+            200: { description: 'Paginated visits for customer', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/CustomerVisit' } } } }] } } } },
+            404: { description: 'Customer not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/visits/{id}': {
+        get: {
+          tags: ['Visits'],
+          summary: 'Get a visit by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Visit data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/CustomerVisit' } } }] } } } },
+            404: { description: 'Visit not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Visits'],
+          summary: 'Delete a visit record (ADMIN only)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Visit deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Visit not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/visits/{id}/checkout': {
+        patch: {
+          tags: ['Visits'],
+          summary: 'Check out a customer (ADMIN, RECEPTIONIST)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Customer checked out', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/CustomerVisit' } } }] } } } },
+            404: { description: 'Visit not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Already checked out', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Quotations ─────────────────────────────────────────────────────────
+      '/api/quotations': {
+        get: {
+          tags: ['Quotations'],
+          summary: 'Get all quotations (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'] } },
+            { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by quotation number' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of quotations', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Quotation' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Quotations'],
+          summary: 'Create a quotation (ADMIN, RECEPTIONIST, SALES)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['jobId'],
+                  properties: {
+                    jobId: { type: 'string', format: 'uuid' },
+                    subtotal: { type: 'number', format: 'float', example: 150000 },
+                    taxRate: { type: 'number', format: 'float', example: 18, description: 'Tax percentage' },
+                    discount: { type: 'number', format: 'float', example: 0 },
+                    validUntil: { type: 'string', format: 'date-time' },
+                    notes: { type: 'string' },
+                    terms: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Quotation created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Quotation' } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/quotations/job/{jobId}': {
+        get: {
+          tags: ['Quotations'],
+          summary: 'Get all quotations for a specific job',
+          parameters: [{ in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'List of quotations for the job', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Quotation' } } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/quotations/{id}': {
+        get: {
+          tags: ['Quotations'],
+          summary: 'Get a quotation by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Quotation data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Quotation' } } }] } } } },
+            404: { description: 'Quotation not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Quotations'],
+          summary: 'Update a quotation (only draft, ADMIN, RECEPTIONIST, SALES)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { subtotal: { type: 'number' }, taxRate: { type: 'number' }, discount: { type: 'number' }, validUntil: { type: 'string', format: 'date-time' }, notes: { type: 'string' }, terms: { type: 'string' } } } } } },
+          responses: {
+            200: { description: 'Quotation updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Quotation' } } }] } } } },
+            404: { description: 'Quotation not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot edit non-draft quotation', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Quotations'],
+          summary: 'Delete a quotation (only draft, ADMIN, RECEPTIONIST)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Quotation deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Quotation not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot delete non-draft quotation', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/quotations/{id}/status': {
+        patch: {
+          tags: ['Quotations'],
+          summary: 'Update quotation status (ADMIN, RECEPTIONIST, SALES)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['status'], properties: { status: { type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'] } } } } } },
+          responses: {
+            200: { description: 'Status updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Quotation not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Job Items ──────────────────────────────────────────────────────────
+      '/api/jobs/{jobId}/items': {
+        get: {
+          tags: ['Jobs'],
+          summary: 'Get all stock items linked to a job',
+          parameters: [{ in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'List of job items', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/JobItem' } } } }] } } } },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Jobs'],
+          summary: 'Add a stock item to a job (ADMIN, RECEPTIONIST, SALES)',
+          parameters: [{ in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['stockItemId', 'quantityNeeded'],
+                  properties: {
+                    stockItemId: { type: 'string', format: 'uuid' },
+                    quantityNeeded: { type: 'number', minimum: 0.01, example: 5 },
+                    notes: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Item added to job', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/JobItem' } } }] } } } },
+            404: { description: 'Job or stock item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Item already added to job', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{jobId}/items/{id}': {
+        put: {
+          tags: ['Jobs'],
+          summary: 'Update a job item (ADMIN, RECEPTIONIST, SALES, SUPERVISOR)',
+          parameters: [
+            { in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } },
+            { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    quantityNeeded: { type: 'number', minimum: 0.01 },
+                    quantityUsed: { type: 'number', minimum: 0 },
+                    notes: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'Job item updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/JobItem' } } }] } } } },
+            404: { description: 'Job item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Jobs'],
+          summary: 'Remove a stock item from a job (ADMIN, RECEPTIONIST, SALES)',
+          parameters: [
+            { in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } },
+            { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            200: { description: 'Item removed from job', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Job item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Stock ──────────────────────────────────────────────────────────────
+      '/api/stock/items': {
+        get: {
+          tags: ['Stock'],
+          summary: 'Get all stock items (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'category', schema: { type: 'string' } },
+            { in: 'query', name: 'stockStatus', schema: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'] } },
+            { in: 'query', name: 'search', schema: { type: 'string' } },
+          ],
+          responses: {
+            200: { description: 'Paginated list of stock items', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/StockItem' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Stock'],
+          summary: 'Create a stock item (ADMIN, STOCK)',
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['itemName'], properties: { itemName: { type: 'string' }, category: { type: 'string' }, unit: { type: 'string' }, description: { type: 'string' }, supplier: { type: 'string' }, unitCost: { type: 'number' }, currentStock: { type: 'number' }, alarmStock: { type: 'number' } } } } } },
+          responses: {
+            201: { description: 'Stock item created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockItem' } } }] } } } },
+          },
+        },
+      },
+      '/api/stock/items/{id}': {
+        get: {
+          tags: ['Stock'],
+          summary: 'Get a stock item by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Stock item data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockItem' } } }] } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Stock'],
+          summary: 'Update a stock item (ADMIN, STOCK)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { itemName: { type: 'string' }, category: { type: 'string' }, unit: { type: 'string' }, supplier: { type: 'string' }, unitCost: { type: 'number' }, alarmStock: { type: 'number' }, isActive: { type: 'boolean' } } } } } },
+          responses: {
+            200: { description: 'Stock item updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockItem' } } }] } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Stock'],
+          summary: 'Delete a stock item (ADMIN, soft delete)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Stock item deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/stock/entries': {
+        get: {
+          tags: ['Stock'],
+          summary: 'Get all stock entries (IN)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'stockItemId', schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            200: { description: 'Paginated list of stock entries', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/StockEntry' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Stock'],
+          summary: 'Record a stock entry / restock (ADMIN, STOCK)',
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['stockItemId', 'quantityIn'], properties: { stockItemId: { type: 'string', format: 'uuid' }, quantityIn: { type: 'number', minimum: 0.01 }, unitCost: { type: 'number' }, supplier: { type: 'string' }, referenceNo: { type: 'string' }, notes: { type: 'string' }, entryDate: { type: 'string', format: 'date-time' } } } } } },
+          responses: {
+            201: { description: 'Stock entry recorded', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockEntry' } } }] } } } },
+            404: { description: 'Stock item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/stock/sorties': {
+        get: {
+          tags: ['Stock'],
+          summary: 'Get all stock sorties (OUT)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'stockItemId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending', 'approved', 'rejected'] } },
+            { in: 'query', name: 'jobId', schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            200: { description: 'Paginated list of stock sorties', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/StockSortie' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Stock'],
+          summary: 'Request a stock sortie / stock out (ADMIN, STOCK, SUPERVISOR, PRODUCTION_MANAGER)',
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['stockItemId', 'quantityOut'], properties: { stockItemId: { type: 'string', format: 'uuid' }, quantityOut: { type: 'number', minimum: 0.01 }, jobId: { type: 'string', format: 'uuid' }, dossierNo: { type: 'string' }, reason: { type: 'string' }, notes: { type: 'string' }, sortieDate: { type: 'string', format: 'date-time' } } } } } },
+          responses: {
+            201: { description: 'Sortie request created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockSortie' } } }] } } } },
+            404: { description: 'Stock item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Insufficient stock', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/stock/sorties/{id}/approve': {
+        patch: {
+          tags: ['Stock'],
+          summary: 'Approve a stock sortie (ADMIN, STOCK)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Sortie approved', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockSortie' } } }] } } } },
+            404: { description: 'Sortie not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Already approved or rejected', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Insufficient stock', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/stock/sorties/{id}/reject': {
+        patch: {
+          tags: ['Stock'],
+          summary: 'Reject a stock sortie (ADMIN, STOCK)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Sortie rejected', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockSortie' } } }] } } } },
+            404: { description: 'Sortie not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Already approved or rejected', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Boutique ───────────────────────────────────────────────────────────
+      '/api/boutique/categories': {
+        get: {
+          tags: ['Boutique'],
+          summary: 'Get all active boutique categories',
+          responses: {
+            200: { description: 'List of categories', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/BoutiqueCategory' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Boutique'],
+          summary: 'Create a boutique category (ADMIN)',
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateBoutiqueCategoryRequest' } } } },
+          responses: {
+            201: { description: 'Category created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueCategory' } } }] } } } },
+            409: { description: 'Category already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/boutique/categories/{id}': {
+        put: {
+          tags: ['Boutique'],
+          summary: 'Update a boutique category (ADMIN)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, skuPrefix: { type: 'string' }, colorClass: { type: 'string' }, isActive: { type: 'boolean' } } } } } },
+          responses: {
+            200: { description: 'Category updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueCategory' } } }] } } } },
+            404: { description: 'Category not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Boutique'],
+          summary: 'Delete a boutique category (ADMIN, soft delete)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Category deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Category not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/boutique/products': {
+        get: {
+          tags: ['Boutique'],
+          summary: 'Get all boutique products (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'categoryId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'] } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name, SKU or description' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of products', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/BoutiqueProduct' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Boutique'],
+          summary: 'Create a boutique product (ADMIN, STOCK)',
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateBoutiqueProductRequest' } } } },
+          responses: {
+            201: { description: 'Product created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueProduct' } } }] } } } },
+            404: { description: 'Category not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/boutique/products/{id}': {
+        get: {
+          tags: ['Boutique'],
+          summary: 'Get a boutique product by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Product data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueProduct' } } }] } } } },
+            404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Boutique'],
+          summary: 'Update a boutique product (ADMIN, STOCK)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' }, unit: { type: 'string' }, price: { type: 'number' }, minStock: { type: 'integer' }, isActive: { type: 'boolean' } } } } } },
+          responses: {
+            200: { description: 'Product updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueProduct' } } }] } } } },
+            404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Boutique'],
+          summary: 'Delete a boutique product (ADMIN, soft delete)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Product deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/boutique/products/{id}/stock': {
+        patch: {
+          tags: ['Boutique'],
+          summary: 'Update product stock (ADMIN, STOCK)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateStockRequest' } } } },
+          responses: {
+            200: { description: 'Stock updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/BoutiqueProduct' } } }] } } } },
+            404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Insufficient stock', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/boutique/products/{id}/stock-movements': {
+        get: {
+          tags: ['Boutique'],
+          summary: 'Get stock movement history for a product',
+          parameters: [
+            { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+          ],
+          responses: {
+            200: { description: 'Paginated stock movements', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/BoutiqueStockMovement' } } } }] } } } },
+            404: { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
