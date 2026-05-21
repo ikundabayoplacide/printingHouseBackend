@@ -76,6 +76,7 @@ Job.init(
       type: DataTypes.ENUM(
         'pending',
         'confirmed',
+        'rejected',
         'in-composition',
         'in-montage',
         'in-printing',
@@ -99,6 +100,10 @@ Job.init(
       allowNull: true,
     },
     notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    rejectReason: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -147,8 +152,8 @@ Job.init(
 
 // Valid status transitions
 Job.validTransitions = {
-  pending: ['confirmed'],
-  confirmed: ['in-composition'],
+  pending: ['confirmed', 'rejected'],
+  confirmed: ['in-composition', 'rejected'],
   'in-composition': ['in-montage'],
   'in-montage': ['in-printing'],
   'in-printing': ['in-binding'],

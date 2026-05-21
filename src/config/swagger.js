@@ -220,7 +220,7 @@ const options = {
             status: {
               type: 'string',
               enum: [
-                'pending', 'confirmed', 'in-composition', 'in-montage',
+                'pending', 'confirmed', 'rejected', 'in-composition', 'in-montage',
                 'in-printing', 'in-binding', 'in-packaging', 'quality-check',
                 'ready-for-delivery', 'delivered', 'completed',
               ],
@@ -229,6 +229,7 @@ const options = {
             priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], example: 'normal' },
             dueDate: { type: 'string', format: 'date-time', nullable: true },
             notes: { type: 'string', nullable: true },
+            rejectReason: { type: 'string', nullable: true, example: 'Missing required artwork files', description: 'Reason for rejection, populated when status is rejected' },
             customerId: { type: 'string', format: 'uuid' },
             createdById: { type: 'string', format: 'uuid' },
             departmentAssignedToId: { type: 'string', format: 'uuid', nullable: true },
@@ -294,12 +295,18 @@ const options = {
             status: {
               type: 'string',
               enum: [
-                'confirmed', 'in-composition', 'in-montage', 'in-printing',
+                'confirmed', 'rejected', 'in-composition', 'in-montage', 'in-printing',
                 'in-binding', 'in-packaging', 'quality-check',
                 'ready-for-delivery', 'delivered', 'completed',
               ],
               example: 'confirmed',
             },
+          },
+        },
+        RejectJobRequest: {
+          type: 'object',
+          properties: {
+            rejectReason: { type: 'string', nullable: true, maxLength: 1000, example: 'Missing required artwork files', description: 'Optional reason for rejection' },
           },
         },
         AssignJobRequest: {
@@ -362,6 +369,32 @@ const options = {
             isRead: { type: 'boolean', example: false },
             relatedEntityType: { type: 'string', nullable: true, example: 'job' },
             relatedEntityId: { type: 'string', format: 'uuid', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Role ──────────────────────────────────────────────────────────────
+        Role: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'SALES' },
+            description: { type: 'string', nullable: true },
+            isActive: { type: 'boolean' },
+            isSystem: { type: 'boolean', description: 'System roles cannot be deleted' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Permission ────────────────────────────────────────────────────────
+        Permission: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'jobs.create' },
+            resource: { type: 'string', example: 'jobs' },
+            action: { type: 'string', example: 'create' },
+            description: { type: 'string', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -608,6 +641,8 @@ const options = {
       { name: 'Stock', description: 'Internal stock/inventory management' },
       { name: 'Quotations', description: 'Quotation management' },
       { name: 'Visits', description: 'Customer visit check-in/check-out tracking' },
+      { name: 'Permissions', description: 'Role-based permission management' },
+      { name: 'Roles', description: 'Dynamic role management' },
       { name: 'Notifications', description: 'User notifications' },
     ],
     paths: {
@@ -934,7 +969,7 @@ const options = {
             { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Department ID' },
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
-            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
             { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
           ],
@@ -991,7 +1026,7 @@ const options = {
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
-            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
             { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
             { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
             { in: 'query', name: 'assignedToId', schema: { type: 'string', format: 'uuid' } },
@@ -1034,7 +1069,7 @@ const options = {
         },
         put: {
           tags: ['Jobs'],
-          summary: 'Update job details',
+          summary: 'Update job details (ADMIN, RECEPTIONIST, SALES, PRODUCTION_MANAGER)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateJobRequest' } } } },
           responses: {
@@ -1050,6 +1085,58 @@ const options = {
             200: { description: 'Job deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
             404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             422: { description: 'Job cannot be deleted in its current status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/approve': {
+        post: {
+          tags: ['Jobs'],
+          summary: 'Approve a job — transitions pending → confirmed (ADMIN, SUPERVISOR, PRODUCTION_MANAGER)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Job approved successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, status: { type: 'string', example: 'confirmed' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job is not in pending status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/reject': {
+        post: {
+          tags: ['Jobs'],
+          summary: 'Reject a job — transitions pending/confirmed → rejected (ADMIN, SUPERVISOR, PRODUCTION_MANAGER)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: false,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/RejectJobRequest' } } },
+          },
+          responses: {
+            200: {
+              description: 'Job rejected successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, status: { type: 'string', example: 'rejected' }, rejectReason: { type: 'string', nullable: true } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job cannot be rejected from its current status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -1078,10 +1165,63 @@ const options = {
           },
         },
       },
+      '/api/jobs/{id}/reassign': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Reassign a job to a different department (ADMIN, SUPERVISOR, SALES, PRODUCTION_MANAGER)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['departmentAssignedToId'],
+                  properties: {
+                    departmentAssignedToId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...', description: 'ID of the new department to reassign this job to' },
+                    reason: { type: 'string', nullable: true, example: 'Department overloaded', description: 'Optional reason for reassignment' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Job reassigned successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              jobNumber: { type: 'string' },
+                              previousDepartment: { type: 'object', nullable: true, properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } },
+                              departmentAssignedTo: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job or department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Job is already assigned to this department', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Job has no current department assignment', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
       '/api/jobs/{id}/assign': {
         post: {
           tags: ['Jobs'],
-          summary: 'Assign a job to a department',
+          summary: 'Assign a job to a department (ADMIN, SUPERVISOR, SALES, PRODUCTION_MANAGER)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignJobRequest' } } } },
           responses: {
@@ -1119,7 +1259,7 @@ const options = {
       '/api/jobs/{id}/deliver': {
         patch: {
           tags: ['Jobs'],
-          summary: 'Mark a job as delivered (must be in completed status)',
+          summary: 'Mark a job as delivered — ADMIN, RECEPTIONIST, SUPERVISOR, SALES, PRODUCTION_MANAGER',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           requestBody: {
             required: false,
@@ -1158,7 +1298,7 @@ const options = {
       '/api/jobs/{id}/complete': {
         patch: {
           tags: ['Jobs'],
-          summary: 'Mark a job as completed (can be called from any active status)',
+          summary: 'Mark a job as completed — ADMIN, RECEPTIONIST, SUPERVISOR, SALES, PRODUCTION_MANAGER',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           responses: {
             200: {
@@ -1230,6 +1370,194 @@ const options = {
           responses: {
             200: { description: 'Payment data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Payment' } } }] } } } },
             404: { description: 'Payment not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Roles ──────────────────────────────────────────────────────────────
+      '/api/roles': {
+        get: {
+          tags: ['Roles'],
+          summary: 'Get all roles',
+          responses: {
+            200: { description: 'List of all roles', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Role' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Roles'],
+          summary: 'Create a new role (ADMIN only)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string', example: 'DESIGNER' },
+                    description: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Role created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Role' } } }] } } } },
+            409: { description: 'Role already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/roles/{id}': {
+        get: {
+          tags: ['Roles'],
+          summary: 'Get a role by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Role data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Role' } } }] } } } },
+            404: { description: 'Role not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Roles'],
+          summary: 'Update a role (ADMIN only)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string', description: 'Cannot change name of system roles' }, description: { type: 'string' }, isActive: { type: 'boolean' } } } } } },
+          responses: {
+            200: { description: 'Role updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Role' } } }] } } } },
+            404: { description: 'Role not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Role name already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot rename system role', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        patch: {
+          tags: ['Roles'],
+          summary: 'Update a role (ADMIN only) — same as PUT',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string', description: 'Cannot change name of system roles' }, description: { type: 'string' }, isActive: { type: 'boolean' } } } } } },
+          responses: {
+            200: { description: 'Role updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Role' } } }] } } } },
+            404: { description: 'Role not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Role name already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot rename system role', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Roles'],
+          summary: 'Delete a role (ADMIN only) — cannot delete system roles or roles in use',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Role deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Role not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot delete system role or role in use', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Permissions ────────────────────────────────────────────────────────
+      '/api/permissions': {
+        get: {
+          tags: ['Permissions'],
+          summary: 'Get all permissions',
+          responses: {
+            200: { description: 'List of all permissions', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Permission' } } } }] } } } },
+          },
+        },
+        post: {
+          tags: ['Permissions'],
+          summary: 'Create a new permission (ADMIN only)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['resource', 'action'],
+                  properties: {
+                    resource: { type: 'string', example: 'jobs' },
+                    action: { type: 'string', example: 'create' },
+                    description: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Permission created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Permission' } } }] } } } },
+            409: { description: 'Permission already exists', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/permissions/{id}': {
+        put: {
+          tags: ['Permissions'],
+          summary: 'Update a permission description (ADMIN only)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { description: { type: 'string' } } } } } },
+          responses: {
+            200: { description: 'Permission updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Permission' } } }] } } } },
+            404: { description: 'Permission not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Permissions'],
+          summary: 'Delete a permission (ADMIN only) — also removes from all roles',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Permission deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Permission not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/permissions/my': {
+        get: {
+          tags: ['Permissions'],
+          summary: 'Get permissions for the current authenticated user',
+          responses: {
+            200: { description: 'Current user role permissions', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'object', properties: { role: { type: 'string' }, permissions: { type: 'array', items: { type: 'string' } } } } } }] } } } },
+          },
+        },
+      },
+      '/api/permissions/role/{role}': {
+        get: {
+          tags: ['Permissions'],
+          summary: 'Get all permissions for a specific role',
+          parameters: [{ in: 'path', name: 'role', required: true, schema: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] } }],
+          responses: {
+            200: { description: 'Role permissions', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'object', properties: { role: { type: 'string' }, permissions: { type: 'array', items: { type: 'string' } } } } } }] } } } },
+            400: { description: 'Invalid role', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Permissions'],
+          summary: 'Grant a permission to a role (ADMIN only)',
+          parameters: [{ in: 'path', name: 'role', required: true, schema: { type: 'string' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['permissionId'], properties: { permissionId: { type: 'string', format: 'uuid' } } } } } },
+          responses: {
+            201: { description: 'Permission granted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Permission not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Role already has this permission', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Permissions'],
+          summary: 'Replace all permissions for a role (ADMIN only)',
+          parameters: [{ in: 'path', name: 'role', required: true, schema: { type: 'string' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['permissionIds'], properties: { permissionIds: { type: 'array', items: { type: 'string', format: 'uuid' } } } } } } },
+          responses: {
+            200: { description: 'Role permissions updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            400: { description: 'Invalid permission IDs', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/permissions/role/{role}/{permissionId}': {
+        delete: {
+          tags: ['Permissions'],
+          summary: 'Revoke a permission from a role (ADMIN only)',
+          parameters: [
+            { in: 'path', name: 'role', required: true, schema: { type: 'string' } },
+            { in: 'path', name: 'permissionId', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            200: { description: 'Permission revoked', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Permission not found for role', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

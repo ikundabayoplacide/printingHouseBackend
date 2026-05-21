@@ -18,6 +18,9 @@ const StockSortie = require('./StockSortie');
 const JobItem = require('./JobItem');
 const Quotation = require('./Quotation');
 const CustomerVisit = require('./CustomerVisit');
+const Permission = require('./Permission');
+const RolePermission = require('./RolePermission');
+const Role = require('./Role');
 
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
@@ -119,4 +122,8 @@ Customer.hasMany(CustomerVisit, { foreignKey: 'customerId', as: 'visits' });
 CustomerVisit.belongsTo(User, { foreignKey: 'recordedById', as: 'recordedBy' });
 User.hasMany(CustomerVisit, { foreignKey: 'recordedById', as: 'recordedVisits' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit };
+// RolePermission → Permission
+RolePermission.belongsTo(Permission, { foreignKey: 'permissionId', as: 'permission' });
+Permission.hasMany(RolePermission, { foreignKey: 'permissionId', as: 'rolePermissions' });
+
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role };

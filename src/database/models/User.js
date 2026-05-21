@@ -58,17 +58,7 @@ User.init(
       allowNull: true,
     },
     role: {
-      type: DataTypes.ENUM(
-        'ADMIN',
-        'RECEPTIONIST',
-        'SALES',
-        'DAF',
-        'ACCOUNTANT',
-        'PRODUCTION_MANAGER',
-        'STOCK',
-        'SUPERVISOR',
-        'WORKER'
-      ),
+      type: DataTypes.STRING(50),
       defaultValue: 'WORKER',
       allowNull: false,
     },

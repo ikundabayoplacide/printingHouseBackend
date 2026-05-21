@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const JOB_STATUSES = [
   'pending',
   'confirmed',
+  'rejected',
   'in-composition',
   'in-montage',
   'in-printing',
@@ -66,9 +67,14 @@ const assignJobValidation = [
     .withMessage('departmentAssignedToId must be a valid UUID'),
 ];
 
+const rejectJobValidation = [
+  body('rejectReason').optional().trim().isLength({ max: 1000 }).withMessage('Reject reason must not exceed 1000 characters'),
+];
+
 module.exports = {
   createJobValidation,
   updateJobValidation,
   updateJobStatusValidation,
   assignJobValidation,
+  rejectJobValidation,
 };

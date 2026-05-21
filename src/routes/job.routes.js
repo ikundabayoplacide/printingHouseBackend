@@ -9,7 +9,10 @@ const {
   createJob,
   updateJob,
   updateJobStatus,
+  approveJob,
+  rejectJob,
   assignJob,
+  reassignJob,
   completeJob,
   deliverJob,
   getCompletedAndPaidJobs,
@@ -21,6 +24,7 @@ const {
   updateJobValidation,
   updateJobStatusValidation,
   assignJobValidation,
+  rejectJobValidation,
 } = require('../modules/jobs/job.validation');
 
 const { validate } = require('../middlewares/validate.middleware');
@@ -43,13 +47,16 @@ router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), createJobValidatio
 
 // Single job CRUD
 router.get('/:id', getJobById);
-router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), updateJobValidation, validate, updateJob);
+router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRODUCTION_MANAGER'), updateJobValidation, validate, updateJob);
 router.delete('/:id', authorize('ADMIN'), deleteJob);
 
 // Workflow actions
 router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRINTEMPLOYEE', 'SUPERVISOR'), updateJobStatusValidation, validate, updateJobStatus);
-router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES'), assignJobValidation, validate, assignJob);
-router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES'), deliverJob);
-router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES'), completeJob);
+router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'PRODUCTION_MANAGER'), approveJob);
+router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'PRODUCTION_MANAGER'), rejectJobValidation, validate, rejectJob);
+router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, assignJob);
+router.patch('/:id/reassign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, reassignJob);
+router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), deliverJob);
+router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), completeJob);
 
 module.exports = router;

@@ -357,6 +357,85 @@ const assignJob = async (req, res, next) => {
 };
 
 /**
+ * PATCH /api/jobs/:id/reassign
+ * Reassign a job from its current department to a new one.
+ */
+const reassignJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (!job.departmentAssignedToId) {
+      return error(res, 'Job has not been assigned to any department yet. Use the assign endpoint instead.', 422);
+    }
+
+    const { departmentAssignedToId, reason } = req.body;
+
+    if (departmentAssignedToId === job.departmentAssignedToId) {
+      return error(res, 'Job is already assigned to this department.', 409);
+    }
+
+    const newDept = await Department.findOne({ where: { id: departmentAssignedToId, isActive: true } });
+    if (!newDept) return error(res, 'Department not found or inactive.', 404);
+
+    const previousDept = job.departmentAssignedTo;
+
+    await job.update({ departmentAssignedToId });
+
+    // Notify SUPERVISOR and PRODUCTION_MANAGER users
+    const managers = await User.findAll({
+      where: { role: ['SUPERVISOR', 'PRODUCTION_MANAGER'], isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      managers.map((m) =>
+        notify(
+          m.id,
+          'Job Reassigned',
+          `Job ${job.jobNumber} has been reassigned from "${previousDept?.name || 'N/A'}" to "${newDept.name}".${reason ? ` Reason: ${reason}` : ''}`,
+          'JOB_ASSIGNED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    // Notify PRINTEMPLOYEE users of the new assignment
+    const printEmployees = await User.findAll({
+      where: { role: 'PRINTEMPLOYEE', isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      printEmployees.map((pe) =>
+        notify(
+          pe.id,
+          'Job Reassigned to Your Department',
+          `Job ${job.jobNumber} has been reassigned to the "${newDept.name}" department.`,
+          'DEPARTMENT_ASSIGNED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(
+      res,
+      {
+        id: job.id,
+        jobNumber: job.jobNumber,
+        previousDepartment: previousDept ? { id: previousDept.id, name: previousDept.name } : null,
+        departmentAssignedTo: { id: newDept.id, name: newDept.name },
+      },
+      'Job reassigned to new department successfully.'
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * PATCH /api/jobs/:id/complete
  * Mark a job as completed. Only allowed if current status is 'delivered'.
  */
@@ -489,6 +568,72 @@ const deliverJob = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/jobs/:id/approve
+ * Approve a pending job (pending → confirmed). Only ADMIN or SUPERVISOR.
+ */
+/**
+ * POST /api/jobs/:id/reject
+ * Reject a pending or confirmed job. Only ADMIN or SUPERVISOR.
+ */
+const rejectJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (!['pending', 'confirmed'].includes(job.status)) {
+      return error(res, `Job cannot be rejected. Current status is '${job.status}'.`, 422);
+    }
+
+    const { rejectReason } = req.body;
+
+    await job.update({ status: 'rejected', rejectReason: rejectReason || null });
+
+    // Notify the job creator
+    await notify(
+      job.createdById,
+      'Job Rejected',
+      `Your job ${job.jobNumber} ("${job.title}") has been rejected.${
+        rejectReason ? ` Reason: ${rejectReason}` : ''
+      }`,
+      'JOB_STATUS_CHANGED',
+      'job',
+      job.id
+    );
+
+    return success(res, { id: job.id, jobNumber: job.jobNumber, status: 'rejected', rejectReason: job.rejectReason }, 'Job rejected successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const approveJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id, { include: jobIncludes });
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (job.status !== 'pending') {
+      return error(res, `Job cannot be approved. Current status is '${job.status}', expected 'pending'.`, 422);
+    }
+
+    await job.update({ status: 'confirmed' });
+
+    // Notify the job creator
+    await notify(
+      job.createdById,
+      'Job Approved',
+      `Your job ${job.jobNumber} ("${job.title}") has been approved and is now confirmed.`,
+      'JOB_STATUS_CHANGED',
+      'job',
+      job.id
+    );
+
+    return success(res, { id: job.id, jobNumber: job.jobNumber, status: 'confirmed' }, 'Job approved successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteJob = async (req, res, next) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -552,7 +697,10 @@ module.exports = {
   createJob,
   updateJob,
   updateJobStatus,
+  approveJob,
+  rejectJob,
   assignJob,
+  reassignJob,
   completeJob,
   deliverJob,
   getCompletedAndPaidJobs,
