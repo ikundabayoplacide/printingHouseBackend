@@ -48,7 +48,7 @@ const login = async (req, res, next) => {
 
     return success(res, {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, departmentId: user.departmentId ?? null },
     }, 'Login successful.');
   } catch (err) {
     next(err);

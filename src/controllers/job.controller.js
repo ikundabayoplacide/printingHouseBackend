@@ -248,6 +248,55 @@ const updateJob = async (req, res, next) => {
 };
 
 /**
+ * PATCH /api/jobs/:id/state
+ * Supervisor marks the current department's work as done.
+ * Only valid transitions: in-X → X-done (as defined in Job.validStateTransitions)
+ */
+const updateJobState = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+
+    const { state } = req.body;
+
+    // The incoming state must be the "done" version of the current state
+    const expectedDone = Job.validStateTransitions[job.state];
+    if (!expectedDone || expectedDone !== state) {
+      return error(
+        res,
+        `Cannot set state to '${state}'. Job is currently '${job.state ?? 'unassigned'}'. Expected next state: '${expectedDone ?? 'none'}'.`,
+        422
+      );
+    }
+
+    await job.update({ state });
+
+    // Notify ADMIN and SUPERVISOR
+    const recipients = await User.findAll({
+      where: { role: ['ADMIN', 'SUPERVISOR'], isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      recipients.map((u) =>
+        notify(
+          u.id,
+          'Job State Updated',
+          `Job ${job.jobNumber} production state changed to "${state}".`,
+          'JOB_STATUS_CHANGED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(res, { id: job.id, jobNumber: job.jobNumber, state: job.state }, 'Job state updated.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * PATCH /api/jobs/:id/status
  * Notify all SUPERVISOR users when job status changes.
  */
@@ -291,6 +340,21 @@ const updateJobStatus = async (req, res, next) => {
 };
 
 /**
+ * Map a department name to a job state.
+ * Returns null if the department name doesn't match any known production state.
+ */
+const departmentToState = (deptName) => {
+  const name = deptName.toLowerCase();
+  if (name.includes('composition')) return 'in-composition';
+  if (name.includes('montage'))     return 'in-montage';
+  if (name.includes('printing'))    return 'in-printing';
+  if (name.includes('binding'))     return 'in-binding';
+  if (name.includes('packaging'))   return 'in-packaging';
+  if (name.includes('quality'))     return 'quality-check';
+  return null;
+};
+
+/**
  * POST /api/jobs/:id/assign
  * Assign job to a department and notify all users in that department.
  * Also notify SUPERVISOR users that the assignment was made.
@@ -305,7 +369,7 @@ const assignJob = async (req, res, next) => {
     const dept = await Department.findOne({ where: { id: departmentAssignedToId, isActive: true } });
     if (!dept) return error(res, 'Department not found or inactive.', 404);
 
-    await job.update({ departmentAssignedToId });
+    await job.update({ departmentAssignedToId, state: departmentToState(dept.name) });
 
     // Notify all SUPERVISOR users that they assigned the job
     const supervisors = await User.findAll({
@@ -380,7 +444,7 @@ const reassignJob = async (req, res, next) => {
 
     const previousDept = job.departmentAssignedTo;
 
-    await job.update({ departmentAssignedToId });
+    await job.update({ departmentAssignedToId, state: departmentToState(newDept.name) });
 
     // Notify SUPERVISOR and PRODUCTION_MANAGER users
     const managers = await User.findAll({
@@ -697,6 +761,7 @@ module.exports = {
   createJob,
   updateJob,
   updateJobStatus,
+  updateJobState,
   approveJob,
   rejectJob,
   assignJob,

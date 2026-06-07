@@ -30,6 +30,9 @@ const notificationRoutes = require('./src/routes/notification.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
 const boutiqueRoutes = require('./src/routes/boutique.routes');
 const stockRoutes = require('./src/routes/stock.routes');
+const invoiceRoutes = require('./src/routes/invoice.routes');
+const jobAssignmentRoutes = require('./src/routes/jobAssignment.routes');
+const employeeRoutes = require('./src/routes/employee.routes');
 
 const app = express();
 
@@ -71,6 +74,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/boutique', boutiqueRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/job-assignments', jobAssignmentRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // 404 handler
 app.use(notFound);

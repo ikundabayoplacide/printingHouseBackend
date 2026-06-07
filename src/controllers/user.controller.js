@@ -1,5 +1,7 @@
 const { Op } = require('sequelize');
 const User = require('../database/models/User');
+const Department = require('../database/models/Department');
+const Job = require('../database/models/Job');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 
@@ -33,7 +35,7 @@ const createUser = async (req, res, next) => {
 const getAllUsers = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { search, role } = req.query;
+    const { search, role, departmentId } = req.query;
 
     const where = {};
     if (search) {
@@ -42,10 +44,15 @@ const getAllUsers = async (req, res, next) => {
       }));
     }
     if (role) where.role = role;
+    if (departmentId) where.departmentId = departmentId;
 
     const { count, rows } = await User.findAndCountAll({
       where,
       attributes: { exclude: ['password'] },
+      include: [
+        { model: Department, as: 'department', attributes: ['id', 'name'], required: false },
+        { model: Job, as: 'currentJob', attributes: ['id', 'jobNumber', 'title', 'state', 'status', 'priority'], required: false },
+      ],
       offset: skip,
       limit,
       order: [['createdAt', 'DESC']],
@@ -64,6 +71,10 @@ const getUserById = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
+      include: [
+        { model: Department, as: 'department', attributes: ['id', 'name'], required: false },
+        { model: Job, as: 'currentJob', attributes: ['id', 'jobNumber', 'title', 'state', 'status', 'priority'], required: false },
+      ],
     });
     if (!user) return error(res, 'User not found.', 404);
 

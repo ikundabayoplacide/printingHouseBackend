@@ -67,6 +67,12 @@ User.init(
       defaultValue: true,
       allowNull: false,
     },
+    currentJobId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      defaultValue: null,
+      comment: 'The job currently assigned to this employee by a supervisor',
+    },
     deletedAt: {
       type: DataTypes.DATE,
       allowNull: true,

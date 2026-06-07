@@ -4,15 +4,24 @@ const JOB_STATUSES = [
   'pending',
   'confirmed',
   'rejected',
+  'ready-for-delivery',
+  'delivered',
+  'completed',
+];
+
+const JOB_STATES = [
   'in-composition',
   'in-montage',
   'in-printing',
   'in-binding',
   'in-packaging',
   'quality-check',
-  'ready-for-delivery',
-  'delivered',
-  'completed',
+  'composition-done',
+  'montage-done',
+  'printing-done',
+  'binding-done',
+  'packaging-done',
+  'qualitycheck-done',
 ];
 
 const createJobValidation = [
@@ -71,10 +80,19 @@ const rejectJobValidation = [
   body('rejectReason').optional().trim().isLength({ max: 1000 }).withMessage('Reject reason must not exceed 1000 characters'),
 ];
 
+const updateJobStateValidation = [
+  body('state')
+    .notEmpty()
+    .withMessage('state is required')
+    .isIn(JOB_STATES)
+    .withMessage(`state must be one of: ${JOB_STATES.join(', ')}`),
+];
+
 module.exports = {
   createJobValidation,
   updateJobValidation,
   updateJobStatusValidation,
   assignJobValidation,
   rejectJobValidation,
+  updateJobStateValidation,
 };

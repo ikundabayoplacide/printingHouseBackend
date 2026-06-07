@@ -21,6 +21,8 @@ const CustomerVisit = require('./CustomerVisit');
 const Permission = require('./Permission');
 const RolePermission = require('./RolePermission');
 const Role = require('./Role');
+const Invoice = require('./Invoice');
+const Employee = require('./Employee');
 
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
@@ -126,4 +128,24 @@ User.hasMany(CustomerVisit, { foreignKey: 'recordedById', as: 'recordedVisits' }
 RolePermission.belongsTo(Permission, { foreignKey: 'permissionId', as: 'permission' });
 Permission.hasMany(RolePermission, { foreignKey: 'permissionId', as: 'rolePermissions' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role };
+// Invoice → Job
+Invoice.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(Invoice, { foreignKey: 'jobId', as: 'invoices' });
+
+// Invoice → Customer
+Invoice.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Customer.hasMany(Invoice, { foreignKey: 'customerId', as: 'invoices' });
+
+// Invoice → User (created by)
+Invoice.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+User.hasMany(Invoice, { foreignKey: 'createdById', as: 'createdInvoices' });
+
+// User → current assigned Job (employee workload)
+User.belongsTo(Job, { foreignKey: 'currentJobId', as: 'currentJob' });
+Job.hasMany(User, { foreignKey: 'currentJobId', as: 'assignedEmployees' });
+
+// Employee → Job (assigned job)
+Employee.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(Employee, { foreignKey: 'jobId', as: 'employees' });
+
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice };

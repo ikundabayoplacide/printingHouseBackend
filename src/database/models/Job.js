@@ -77,12 +77,6 @@ Job.init(
         'pending',
         'confirmed',
         'rejected',
-        'in-composition',
-        'in-montage',
-        'in-printing',
-        'in-binding',
-        'in-packaging',
-        'quality-check',
         'ready-for-delivery',
         'delivered',
         'completed'
@@ -106,6 +100,25 @@ Job.init(
     rejectReason: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+    state: {
+      type: DataTypes.ENUM(
+        'in-composition',
+        'in-montage',
+        'in-printing',
+        'in-binding',
+        'in-packaging',
+        'quality-check',
+        'composition-done',
+        'montage-done',
+        'printing-done',
+        'binding-done',
+        'packaging-done',
+        'qualitycheck-done'
+      ),
+      allowNull: true,
+      defaultValue: null,
+      comment: 'Production state — set on assignment; supervisor marks it done when department finishes',
     },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
@@ -153,16 +166,20 @@ Job.init(
 // Valid status transitions
 Job.validTransitions = {
   pending: ['confirmed', 'rejected'],
-  confirmed: ['in-composition', 'rejected'],
-  'in-composition': ['in-montage'],
-  'in-montage': ['in-printing'],
-  'in-printing': ['in-binding'],
-  'in-binding': ['in-packaging'],
-  'in-packaging': ['quality-check'],
-  'quality-check': ['ready-for-delivery'],
+  confirmed: ['ready-for-delivery', 'rejected'],
   'ready-for-delivery': ['delivered'],
   delivered: ['completed'],
   completed: [],
+};
+
+// Valid state transitions (supervisor marks department work as done)
+Job.validStateTransitions = {
+  'in-composition':  'composition-done',
+  'in-montage':      'montage-done',
+  'in-printing':     'printing-done',
+  'in-binding':      'binding-done',
+  'in-packaging':    'packaging-done',
+  'quality-check':   'qualitycheck-done',
 };
 
 Job.canTransition = (fromStatus, toStatus) => {

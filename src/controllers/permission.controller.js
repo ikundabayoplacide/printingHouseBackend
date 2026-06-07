@@ -78,8 +78,9 @@ const deletePermission = async (req, res, next) => {
 const getRolePermissions = async (req, res, next) => {
   try {
     const { role } = req.params;
-    const validRoles = ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'];
-    if (!validRoles.includes(role)) return error(res, 'Invalid role.', 400);
+    const Role = require('../database/models/Role');
+    const exists = await Role.findOne({ where: { name: role } });
+    if (!exists) return error(res, 'Invalid role.', 400);
 
     const permissions = await getPermissionsForRole(role);
     return success(res, { role, permissions });

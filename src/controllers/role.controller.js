@@ -41,7 +41,7 @@ const createRole = async (req, res, next) => {
     const existing = await Role.findOne({ where: { name: normalizedName } });
     if (existing) return error(res, `Role "${normalizedName}" already exists.`, 409);
 
-    const role = await Role.create({ name: normalizedName, description: description || null, isSystem: false });
+    const role = await Role.create({ name: normalizedName, description: description || null });
     return success(res, role, 'Role created successfully.', 201);
   } catch (err) {
     next(err);

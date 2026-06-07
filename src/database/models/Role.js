@@ -33,7 +33,7 @@ Role.init(
     },
     isSystem: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: true,
       allowNull: false,
       comment: 'System roles cannot be deleted',
     },

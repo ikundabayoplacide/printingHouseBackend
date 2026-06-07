@@ -55,7 +55,28 @@ const options = {
             gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'], nullable: true },
             role: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] },
             departmentId: { type: 'string', format: 'uuid', nullable: true },
+            currentJobId: { type: 'string', format: 'uuid', nullable: true },
             isActive: { type: 'boolean' },
+            department: {
+              nullable: true,
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Printing' },
+              },
+            },
+            currentJob: {
+              nullable: true,
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                jobNumber: { type: 'string', example: 'JOB-2026-001' },
+                title: { type: 'string', example: 'Business Cards' },
+                state: { type: 'string', nullable: true, example: 'in-printing' },
+                status: { type: 'string', example: 'confirmed' },
+                priority: { type: 'string', example: 'normal' },
+              },
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -219,17 +240,23 @@ const options = {
             paidAt: { type: 'string', format: 'date-time', nullable: true },
             status: {
               type: 'string',
-              enum: [
-                'pending', 'confirmed', 'rejected', 'in-composition', 'in-montage',
-                'in-printing', 'in-binding', 'in-packaging', 'quality-check',
-                'ready-for-delivery', 'delivered', 'completed',
-              ],
+              enum: ['pending', 'confirmed', 'rejected', 'ready-for-delivery', 'delivered', 'completed'],
               example: 'pending',
             },
             priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], example: 'normal' },
             dueDate: { type: 'string', format: 'date-time', nullable: true },
             notes: { type: 'string', nullable: true },
             rejectReason: { type: 'string', nullable: true, example: 'Missing required artwork files', description: 'Reason for rejection, populated when status is rejected' },
+            state: {
+              type: 'string',
+              enum: [
+                'in-composition', 'in-montage', 'in-printing', 'in-binding', 'in-packaging', 'quality-check',
+                'composition-done', 'montage-done', 'printing-done', 'binding-done', 'packaging-done', 'qualitycheck-done',
+              ],
+              nullable: true,
+              example: 'in-printing',
+              description: 'Production state — set on assignment; supervisor marks it done when department finishes',
+            },
             customerId: { type: 'string', format: 'uuid' },
             createdById: { type: 'string', format: 'uuid' },
             departmentAssignedToId: { type: 'string', format: 'uuid', nullable: true },
@@ -294,11 +321,7 @@ const options = {
           properties: {
             status: {
               type: 'string',
-              enum: [
-                'confirmed', 'rejected', 'in-composition', 'in-montage', 'in-printing',
-                'in-binding', 'in-packaging', 'quality-check',
-                'ready-for-delivery', 'delivered', 'completed',
-              ],
+              enum: ['confirmed', 'rejected', 'ready-for-delivery', 'delivered', 'completed'],
               example: 'confirmed',
             },
           },
@@ -593,6 +616,174 @@ const options = {
             reason: { type: 'string', example: 'restock' },
           },
         },
+        // ── Employee ──────────────────────────────────────────────────────────
+        Employee: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            fullName: { type: 'string', example: 'Jane Uwase' },
+            phoneNumber: { type: 'string', example: '+250788000001' },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'] },
+            dateOfBirth: { type: 'string', format: 'date', example: '1995-06-15' },
+            nid: { type: 'string', nullable: true, example: '1199580012345678' },
+            address: { type: 'string', example: 'KG 45 St, Kigali' },
+            email: { type: 'string', format: 'email', nullable: true },
+            supportContact: { type: 'string', nullable: true, example: '+250788000002' },
+            bankAccount: { type: 'string', nullable: true, example: '000-1234567-01' },
+            contractSalary: { type: 'number', format: 'float', example: 250000 },
+            contractType: { type: 'string', enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'], example: 'FULL_TIME' },
+            hiredAt: { type: 'string', format: 'date', nullable: true, example: '2023-01-10' },
+            isActive: { type: 'boolean', example: true },
+            departmentId: { type: 'string', format: 'uuid', nullable: true },
+            jobId: { type: 'string', format: 'uuid', nullable: true },
+            department: {
+              nullable: true,
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Printing' },
+              },
+            },
+            job: {
+              nullable: true,
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                jobNumber: { type: 'string', example: 'JOB-2026-001' },
+                title: { type: 'string', example: 'Business Cards' },
+                state: { type: 'string', nullable: true, example: 'in-printing' },
+                status: { type: 'string', example: 'confirmed' },
+                priority: { type: 'string', example: 'normal' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateEmployeeRequest: {
+          type: 'object',
+          required: ['fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'contractSalary'],
+          properties: {
+            fullName: { type: 'string', example: 'Jane Uwase' },
+            phoneNumber: { type: 'string', example: '+250788000001' },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'], example: 'FEMALE' },
+            dateOfBirth: { type: 'string', format: 'date', example: '1995-06-15' },
+            address: { type: 'string', example: 'KG 45 St, Kigali' },
+            contractSalary: { type: 'number', format: 'float', minimum: 0, example: 250000 },
+            contractType: { type: 'string', enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'], example: 'FULL_TIME' },
+            nid: { type: 'string', nullable: true, example: '1199580012345678' },
+            email: { type: 'string', format: 'email', nullable: true, example: 'jane@example.com' },
+            supportContact: { type: 'string', nullable: true, example: '+250788000002' },
+            bankAccount: { type: 'string', nullable: true, example: '000-1234567-01' },
+            hiredAt: { type: 'string', format: 'date', nullable: true, example: '2023-01-10' },
+            departmentId: { type: 'string', format: 'uuid', nullable: true },
+          },
+        },
+        UpdateEmployeeRequest: {
+          type: 'object',
+          properties: {
+            fullName: { type: 'string', example: 'Jane Uwase' },
+            phoneNumber: { type: 'string', example: '+250788000001' },
+            gender: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'] },
+            dateOfBirth: { type: 'string', format: 'date' },
+            address: { type: 'string' },
+            contractSalary: { type: 'number', format: 'float', minimum: 0 },
+            contractType: { type: 'string', enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'] },
+            nid: { type: 'string', nullable: true },
+            email: { type: 'string', format: 'email', nullable: true },
+            supportContact: { type: 'string', nullable: true },
+            bankAccount: { type: 'string', nullable: true },
+            hiredAt: { type: 'string', format: 'date', nullable: true },
+            departmentId: { type: 'string', format: 'uuid', nullable: true },
+            isActive: { type: 'boolean' },
+          },
+        },
+        AssignEmployeeJobRequest: {
+          type: 'object',
+          properties: {
+            jobId: { type: 'string', format: 'uuid', nullable: true, example: 'a1b2c3d4-...', description: 'Job UUID to assign, or null to remove assignment' },
+          },
+        },
+        // ── Job Assignment ────────────────────────────────────────────────────
+        AssignJobToEmployeeRequest: {
+          type: 'object',
+          required: ['jobId', 'employeeId'],
+          properties: {
+            jobId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...' },
+            employeeId: { type: 'string', format: 'uuid', example: 'b2c3d4e5-...' },
+          },
+        },
+        // ── Invoice ──────────────────────────────────────────────────────────
+        InvoiceLineItem: {
+          type: 'object',
+          required: ['name', 'quantity', 'unitPrice'],
+          properties: {
+            name: { type: 'string', example: 'Business Cards printing' },
+            description: { type: 'string', nullable: true, example: '500 double-sided cards' },
+            quantity: { type: 'number', format: 'float', minimum: 0.01, example: 500 },
+            unitPrice: { type: 'number', format: 'float', minimum: 0, example: 0.30 },
+            totalPrice: { type: 'number', format: 'float', example: 150.00, description: 'Computed: quantity × unitPrice' },
+          },
+        },
+        Invoice: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            invoiceNo: { type: 'string', example: 'INV-2026-001' },
+            jobId: { type: 'string', format: 'uuid' },
+            customerId: { type: 'string', format: 'uuid' },
+            createdById: { type: 'string', format: 'uuid' },
+            lineItems: { type: 'array', items: { $ref: '#/components/schemas/InvoiceLineItem' } },
+            subtotal: { type: 'number', format: 'float', example: 150000 },
+            discountType: { type: 'string', enum: ['FIXED', 'PERCENTAGE'], nullable: true, example: 'PERCENTAGE' },
+            discountValue: { type: 'number', format: 'float', example: 10, description: 'Amount or percentage depending on discountType' },
+            discountAmount: { type: 'number', format: 'float', example: 15000, description: 'Computed discount in currency' },
+            taxRate: { type: 'number', format: 'float', example: 18, description: 'Tax percentage e.g. 18 for 18%' },
+            taxAmount: { type: 'number', format: 'float', example: 24300, description: 'Computed tax amount' },
+            totalAmount: { type: 'number', format: 'float', example: 159300, description: 'Final amount: subtotal - discountAmount + taxAmount' },
+            status: { type: 'string', enum: ['draft', 'issued', 'paid', 'cancelled'], example: 'draft' },
+            issuedAt: { type: 'string', format: 'date-time', nullable: true },
+            dueDate: { type: 'string', format: 'date-time', nullable: true },
+            notes: { type: 'string', nullable: true },
+            terms: { type: 'string', nullable: true },
+            job: { $ref: '#/components/schemas/Job' },
+            customer: { $ref: '#/components/schemas/Customer' },
+            createdBy: { $ref: '#/components/schemas/User' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateInvoiceRequest: {
+          type: 'object',
+          required: ['jobId', 'customerId', 'lineItems'],
+          properties: {
+            jobId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...' },
+            customerId: { type: 'string', format: 'uuid', example: 'a1b2c3d4-...' },
+            lineItems: {
+              type: 'array',
+              minItems: 1,
+              items: { $ref: '#/components/schemas/InvoiceLineItem' },
+            },
+            discountType: { type: 'string', enum: ['FIXED', 'PERCENTAGE'], nullable: true, example: 'PERCENTAGE' },
+            discountValue: { type: 'number', format: 'float', minimum: 0, example: 10 },
+            taxRate: { type: 'number', format: 'float', minimum: 0, example: 18 },
+            dueDate: { type: 'string', format: 'date-time', nullable: true },
+            notes: { type: 'string', nullable: true },
+            terms: { type: 'string', nullable: true },
+          },
+        },
+        UpdateInvoiceRequest: {
+          type: 'object',
+          properties: {
+            lineItems: { type: 'array', minItems: 1, items: { $ref: '#/components/schemas/InvoiceLineItem' } },
+            discountType: { type: 'string', enum: ['FIXED', 'PERCENTAGE'], nullable: true },
+            discountValue: { type: 'number', format: 'float', minimum: 0 },
+            taxRate: { type: 'number', format: 'float', minimum: 0 },
+            dueDate: { type: 'string', format: 'date-time', nullable: true },
+            notes: { type: 'string', nullable: true },
+            terms: { type: 'string', nullable: true },
+          },
+        },
         // ── Shared ───────────────────────────────────────────────────────────
         PaginatedResponse: {
           type: 'object',
@@ -643,6 +834,9 @@ const options = {
       { name: 'Visits', description: 'Customer visit check-in/check-out tracking' },
       { name: 'Permissions', description: 'Role-based permission management' },
       { name: 'Roles', description: 'Dynamic role management' },
+      { name: 'Invoices', description: 'Invoice generation and lifecycle management' },
+      { name: 'Employees', description: 'Employee management' },
+      { name: 'Job Assignments', description: 'Supervisor assigns jobs to department employees' },
       { name: 'Notifications', description: 'User notifications' },
     ],
     paths: {
@@ -671,7 +865,16 @@ const options = {
                             type: 'object',
                             properties: {
                               token: { type: 'string' },
-                              user: { $ref: '#/components/schemas/User' },
+                              user: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  name: { type: 'string' },
+                                  email: { type: 'string', format: 'email' },
+                                  role: { type: 'string' },
+                                  departmentId: { type: 'string', format: 'uuid', nullable: true },
+                                },
+                              },
                             },
                           },
                         },
@@ -739,6 +942,7 @@ const options = {
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name or email' },
             { in: 'query', name: 'role', schema: { type: 'string', enum: ['ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT', 'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER'] } },
+            { in: 'query', name: 'departmentId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by department' },
           ],
           responses: {
             200: {
@@ -969,7 +1173,7 @@ const options = {
             { in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Department ID' },
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
-            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','ready-for-delivery','delivered','completed'] } },
             { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
           ],
@@ -1026,7 +1230,7 @@ const options = {
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by job number or title' },
-            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','in-composition','in-montage','in-printing','in-binding','in-packaging','quality-check','ready-for-delivery','delivered','completed'] } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending','confirmed','rejected','ready-for-delivery','delivered','completed'] } },
             { in: 'query', name: 'priority', schema: { type: 'string', enum: ['low','normal','high','urgent'] } },
             { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
             { in: 'query', name: 'assignedToId', schema: { type: 'string', format: 'uuid' } },
@@ -1091,7 +1295,7 @@ const options = {
       '/api/jobs/{id}/approve': {
         post: {
           tags: ['Jobs'],
-          summary: 'Approve a job — transitions pending → confirmed (ADMIN, SUPERVISOR, PRODUCTION_MANAGER)',
+          summary: 'Approve a job — transitions pending → confirmed (ADMIN, SUPERVISOR, PRODUCTION_MANAGER, DAF)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           responses: {
             200: {
@@ -1115,7 +1319,7 @@ const options = {
       '/api/jobs/{id}/reject': {
         post: {
           tags: ['Jobs'],
-          summary: 'Reject a job — transitions pending/confirmed → rejected (ADMIN, SUPERVISOR, PRODUCTION_MANAGER)',
+          summary: 'Reject a job — transitions pending/confirmed → rejected (ADMIN, SUPERVISOR, PRODUCTION_MANAGER, DAF)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           requestBody: {
             required: false,
@@ -1137,6 +1341,51 @@ const options = {
             },
             404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             422: { description: 'Job cannot be rejected from its current status', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/jobs/{id}/state': {
+        patch: {
+          tags: ['Jobs'],
+          summary: 'Update job production state — supervisor marks department work done (ADMIN, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['state'],
+                  properties: {
+                    state: {
+                      type: 'string',
+                      enum: [
+                        'composition-done', 'montage-done', 'printing-done',
+                        'binding-done', 'packaging-done', 'qualitycheck-done',
+                      ],
+                      example: 'printing-done',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Job state updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, state: { type: 'string' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Invalid state transition', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -2082,6 +2331,307 @@ const options = {
           },
         },
       },
+      // ── Job Assignments ────────────────────────────────────────────────────
+      '/api/job-assignments/assign': {
+        post: {
+          tags: ['Job Assignments'],
+          summary: 'Assign a job to an employee in the same department (ADMIN, SUPERVISOR)',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignJobToEmployeeRequest' } } },
+          },
+          responses: {
+            200: {
+              description: 'Job assigned to employee successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              employee: { $ref: '#/components/schemas/User' },
+                              replacedJobId: { type: 'string', format: 'uuid', nullable: true },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job or employee not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Employee not in job department or job not assigned to department', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/job-assignments/unassign/{employeeId}': {
+        delete: {
+          tags: ['Job Assignments'],
+          summary: 'Remove current job assignment from an employee (ADMIN, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'employeeId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Job unassigned from employee',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { employeeId: { type: 'string', format: 'uuid' }, unassignedJobId: { type: 'string', format: 'uuid' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Employee not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Employee has no job assigned', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/job-assignments/employees/{departmentId}': {
+        get: {
+          tags: ['Job Assignments'],
+          summary: 'Get all employees in a department with their current job assignment (ADMIN, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'departmentId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'List of employees with their current job',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              department: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } } },
+                              employees: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/job-assignments/job/{jobId}/employees': {
+        get: {
+          tags: ['Job Assignments'],
+          summary: 'Get all employees currently assigned to a specific job (ADMIN, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'jobId', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'List of employees assigned to the job',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              job: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, jobNumber: { type: 'string' }, title: { type: 'string' }, state: { type: 'string' }, status: { type: 'string' } } },
+                              employees: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      // ── Invoices ───────────────────────────────────────────────────────────
+      '/api/invoices/next-number': {
+        get: {
+          tags: ['Invoices'],
+          summary: 'Preview the next auto-generated invoice number',
+          responses: {
+            200: {
+              description: 'Next invoice number',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { invoiceNo: { type: 'string', example: 'INV-2026-001' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/invoices/number/{invoiceNo}': {
+        get: {
+          tags: ['Invoices'],
+          summary: 'Get an invoice by its invoice number (e.g. INV-2026-001)',
+          parameters: [
+            { in: 'path', name: 'invoiceNo', required: true, schema: { type: 'string' }, example: 'INV-2026-001' },
+          ],
+          responses: {
+            200: { description: 'Invoice data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Invoice' } } }] } } } },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/invoices': {
+        get: {
+          tags: ['Invoices'],
+          summary: 'Get all invoices (paginated, filterable)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['draft', 'issued', 'paid', 'cancelled'] } },
+            { in: 'query', name: 'customerId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'jobId', schema: { type: 'string', format: 'uuid' } },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by invoice number' },
+          ],
+          responses: {
+            200: { description: 'Paginated list of invoices', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Invoice' } } } }] } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Invoices'],
+          summary: 'Create a new invoice for a job (ADMIN, RECEPTIONIST, SALES, ACCOUNTANT)',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateInvoiceRequest' } } },
+          },
+          responses: {
+            201: { description: 'Invoice created successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Invoice' } } }] } } } },
+            404: { description: 'Job or customer not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/invoices/{id}': {
+        get: {
+          tags: ['Invoices'],
+          summary: 'Get an invoice by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Invoice data', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Invoice' } } }] } } } },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Invoices'],
+          summary: 'Update a draft invoice (ADMIN, RECEPTIONIST, SALES, ACCOUNTANT)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateInvoiceRequest' } } } },
+          responses: {
+            200: { description: 'Invoice updated successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Invoice' } } }] } } } },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Only draft invoices can be edited', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Invoices'],
+          summary: 'Delete a draft invoice (ADMIN, ACCOUNTANT)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Invoice deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Only draft invoices can be deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/invoices/{id}/issue': {
+        patch: {
+          tags: ['Invoices'],
+          summary: 'Issue a draft invoice — marks it as sent to client (ADMIN, RECEPTIONIST, SALES, ACCOUNTANT)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Invoice issued successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, invoiceNo: { type: 'string' }, status: { type: 'string', example: 'issued' }, issuedAt: { type: 'string', format: 'date-time' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Only draft invoices can be issued', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/invoices/{id}/mark-paid': {
+        patch: {
+          tags: ['Invoices'],
+          summary: 'Mark an issued invoice as paid (ADMIN, ACCOUNTANT, DAF)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Invoice marked as paid',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, invoiceNo: { type: 'string' }, status: { type: 'string', example: 'paid' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Only issued invoices can be marked as paid', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/invoices/{id}/cancel': {
+        patch: {
+          tags: ['Invoices'],
+          summary: 'Cancel a draft or issued invoice (ADMIN, ACCOUNTANT)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Invoice cancelled',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, invoiceNo: { type: 'string' }, status: { type: 'string', example: 'cancelled' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Invoice not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Cannot cancel a paid invoice', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
       // ── Notifications ──────────────────────────────────────────────────────
       '/api/notifications': {
         get: {
@@ -2129,7 +2679,7 @@ const options = {
           },
         },
       },
-      '/api/notifications/{id}/read': {
+      '/api/notifications/{id}': {
         patch: {
           tags: ['Notifications'],
           summary: 'Mark a single notification as read',
@@ -2139,8 +2689,6 @@ const options = {
             404: { description: 'Notification not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
-      },
-      '/api/notifications/{id}': {
         delete: {
           tags: ['Notifications'],
           summary: 'Delete a single notification',
@@ -2151,6 +2699,145 @@ const options = {
           },
         },
       },
+      // ── Employees ─────────────────────────────────────────────────────────
+      '/api/employees': {
+        get: {
+          tags: ['Employees'],
+          summary: 'List all employees (paginated)',
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } },
+            { in: 'query', name: 'departmentId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by department' },
+            { in: 'query', name: 'isActive', schema: { type: 'boolean' }, description: 'Filter by active status' },
+            { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name, phone, or email' },
+          ],
+          responses: {
+            200: {
+              description: 'Paginated list of employees',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/PaginatedResponse' },
+                      { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Employee' } } } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ['Employees'],
+          summary: 'Create a new employee (ADMIN, HR)',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateEmployeeRequest' } } },
+          },
+          responses: {
+            201: { description: 'Employee created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/employees/{id}': {
+        get: {
+          tags: ['Employees'],
+          summary: 'Get a single employee by ID',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Employee details', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Employee not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Employees'],
+          summary: 'Update an employee (ADMIN, HR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateEmployeeRequest' } } },
+          },
+          responses: {
+            200: { description: 'Employee updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Employee or department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Employees'],
+          summary: 'Delete an employee (ADMIN)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Employee deleted', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Employee not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/employees/{id}/department': {
+        patch: {
+          tags: ['Employees'],
+          summary: 'Assign or remove department from an employee (ADMIN, HR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    departmentId: { type: 'string', format: 'uuid', nullable: true, description: 'Department UUID to assign, or null to remove' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'Department assigned/removed', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Employee or department not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/employees/{id}/assign-job': {
+        patch: {
+          tags: ['Employees'],
+          summary: 'Assign or remove a job from an employee (ADMIN, HR, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignEmployeeJobRequest' } } },
+          },
+          responses: {
+            200: { description: 'Job assigned/removed', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Employee or job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Employee not in job\'s assigned department', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/employees/{id}/toggle-active': {
+        patch: {
+          tags: ['Employees'],
+          summary: 'Toggle employee active/inactive status (ADMIN, HR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: {
+              description: 'Active status toggled',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, isActive: { type: 'boolean' } } } } },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: 'Employee not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+
     },
   },
   apis: [], // all docs are defined inline above — no file scanning needed
