@@ -136,6 +136,19 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+      {
+        id: uuidv4(),
+        name: 'Composition Supervisor',
+        email: 'supervisor.composition@gmail.com',
+        password,
+        phone: '+250788000010',
+        gender: 'MALE',
+        role: 'SUPERVISOR',
+        departmentId: DEPT_IDS.composition,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ]);
   },
 

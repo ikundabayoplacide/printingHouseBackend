@@ -635,7 +635,6 @@ const options = {
             hiredAt: { type: 'string', format: 'date', nullable: true, example: '2023-01-10' },
             isActive: { type: 'boolean', example: true },
             departmentId: { type: 'string', format: 'uuid', nullable: true },
-            jobId: { type: 'string', format: 'uuid', nullable: true },
             department: {
               nullable: true,
               type: 'object',
@@ -644,16 +643,27 @@ const options = {
                 name: { type: 'string', example: 'Printing' },
               },
             },
-            job: {
-              nullable: true,
-              type: 'object',
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-                jobNumber: { type: 'string', example: 'JOB-2026-001' },
-                title: { type: 'string', example: 'Business Cards' },
-                state: { type: 'string', nullable: true, example: 'in-printing' },
-                status: { type: 'string', example: 'confirmed' },
-                priority: { type: 'string', example: 'normal' },
+            assignedJobs: {
+              type: 'array',
+              description: 'All jobs currently assigned to this employee',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  jobNumber: { type: 'string', example: 'JOB-2026-001' },
+                  title: { type: 'string', example: 'Business Cards' },
+                  state: { type: 'string', nullable: true, example: 'in-composition' },
+                  status: { type: 'string', example: 'confirmed' },
+                  priority: { type: 'string', example: 'normal' },
+                  employee_job_assignment: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      assignedAt: { type: 'string', format: 'date-time' },
+                      assignedById: { type: 'string', format: 'uuid', nullable: true },
+                    },
+                  },
+                },
               },
             },
             createdAt: { type: 'string', format: 'date-time' },
@@ -2703,11 +2713,11 @@ const options = {
       '/api/employees': {
         get: {
           tags: ['Employees'],
-          summary: 'List all employees (paginated)',
+          summary: 'List all employees (paginated). SUPERVISORs are automatically scoped to their own department.',
           parameters: [
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } },
-            { in: 'query', name: 'departmentId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by department' },
+            { in: 'query', name: 'departmentId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by department (ignored for SUPERVISOR — their department is applied automatically)' },
             { in: 'query', name: 'isActive', schema: { type: 'boolean' }, description: 'Filter by active status' },
             { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search by name, phone, or email' },
           ],
@@ -2801,16 +2811,32 @@ const options = {
       '/api/employees/{id}/assign-job': {
         patch: {
           tags: ['Employees'],
-          summary: 'Assign or remove a job from an employee (ADMIN, HR, SUPERVISOR)',
+          summary: 'Assign a job to an employee (ADMIN, HR, SUPERVISOR). A job can only be assigned once per employee.',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
           requestBody: {
             required: true,
             content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignEmployeeJobRequest' } } },
           },
           responses: {
-            200: { description: 'Job assigned/removed', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            200: { description: 'Job assigned successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
             404: { description: 'Employee or job not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            409: { description: 'Job already assigned to this employee', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             422: { description: 'Employee not in job\'s assigned department', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/employees/{id}/unassign-job': {
+        patch: {
+          tags: ['Employees'],
+          summary: 'Remove a specific job from an employee\'s assignments (ADMIN, HR, SUPERVISOR)',
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignEmployeeJobRequest' } } },
+          },
+          responses: {
+            200: { description: 'Job removed from employee', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/Employee' } } }] } } } },
+            404: { description: 'Employee not found or job not assigned to this employee', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

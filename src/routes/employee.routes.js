@@ -9,6 +9,7 @@ const {
   toggleEmployeeActive,
   assignDepartment,
   assignJob,
+  unassignJob,
   deleteEmployee,
 } = require('../controllers/employee.controller');
 
@@ -25,6 +26,7 @@ router.post('/', authorize('ADMIN', 'HR'), createEmployeeValidation, validate, c
 router.put('/:id', authorize('ADMIN', 'HR'), updateEmployeeValidation, validate, updateEmployee);
 router.patch('/:id/department', authorize('ADMIN', 'HR'), assignDepartment);
 router.patch('/:id/assign-job', authorize('ADMIN', 'HR', 'SUPERVISOR'), assignJobValidation, validate, assignJob);
+router.patch('/:id/unassign-job', authorize('ADMIN', 'HR', 'SUPERVISOR'), assignJobValidation, validate, unassignJob);
 router.patch('/:id/toggle-active', authorize('ADMIN', 'HR'), toggleEmployeeActive);
 router.delete('/:id', authorize('ADMIN'), deleteEmployee);
 

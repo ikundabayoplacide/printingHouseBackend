@@ -23,10 +23,15 @@ const RolePermission = require('./RolePermission');
 const Role = require('./Role');
 const Invoice = require('./Invoice');
 const Employee = require('./Employee');
+const EmployeeJobAssignment = require('./EmployeeJobAssignment');
 
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
+
+// Employee → Department
+Employee.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+Department.hasMany(Employee, { foreignKey: 'departmentId', as: 'employees' });
 
 // Job → Customer
 Job.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
@@ -144,8 +149,26 @@ User.hasMany(Invoice, { foreignKey: 'createdById', as: 'createdInvoices' });
 User.belongsTo(Job, { foreignKey: 'currentJobId', as: 'currentJob' });
 Job.hasMany(User, { foreignKey: 'currentJobId', as: 'assignedEmployees' });
 
-// Employee → Job (assigned job)
+// Employee → Job (legacy single jobId — kept for backward compatibility)
 Employee.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
 Job.hasMany(Employee, { foreignKey: 'jobId', as: 'employees' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice };
+// Employee ↔ Job (many-to-many via employee_job_assignments)
+Employee.belongsToMany(Job, {
+  through: EmployeeJobAssignment,
+  foreignKey: 'employeeId',
+  otherKey: 'jobId',
+  as: 'assignedJobs',
+});
+Job.belongsToMany(Employee, {
+  through: EmployeeJobAssignment,
+  foreignKey: 'jobId',
+  otherKey: 'employeeId',
+  as: 'assignedWorkers',
+});
+
+// EmployeeJobAssignment → User (assigned by)
+EmployeeJobAssignment.belongsTo(User, { foreignKey: 'assignedById', as: 'assignedBy' });
+User.hasMany(EmployeeJobAssignment, { foreignKey: 'assignedById', as: 'jobAssignments' });
+
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment };

@@ -2,16 +2,25 @@ const { Op } = require('sequelize');
 const Employee = require('../database/models/Employee');
 const Department = require('../database/models/Department');
 const Job = require('../database/models/Job');
+const EmployeeJobAssignment = require('../database/models/EmployeeJobAssignment');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 
 const employeeIncludes = [
   { model: Department, as: 'department', attributes: ['id', 'name'] },
-  { model: Job, as: 'job', attributes: ['id', 'jobNumber', 'title', 'state', 'status', 'priority'], required: false },
+  {
+    model: Job,
+    as: 'assignedJobs',
+    attributes: ['id', 'jobNumber', 'title', 'state', 'status', 'priority'],
+    through: { attributes: ['id', 'assignedAt', 'assignedById'] },
+    required: false,
+  },
 ];
 
 /**
  * GET /api/employees
+ * SUPERVISOR: automatically scoped to their own department.
+ * ADMIN / others: can filter freely via ?departmentId=
  */
 const getAllEmployees = async (req, res, next) => {
   try {
@@ -19,7 +28,17 @@ const getAllEmployees = async (req, res, next) => {
     const { departmentId, isActive, search } = req.query;
 
     const where = {};
-    if (departmentId) where.departmentId = departmentId;
+
+    // Supervisors are always restricted to their own department
+    if (req.user.role === 'SUPERVISOR') {
+      if (!req.user.departmentId) {
+        return error(res, 'Your account is not assigned to any department.', 403);
+      }
+      where.departmentId = req.user.departmentId;
+    } else if (departmentId) {
+      where.departmentId = departmentId;
+    }
+
     if (isActive !== undefined) where.isActive = isActive === 'true';
     if (search) {
       where[Op.or] = [
@@ -33,6 +52,7 @@ const getAllEmployees = async (req, res, next) => {
       where,
       offset: skip,
       limit,
+      distinct: true,
       order: [['createdAt', 'DESC']],
       include: employeeIncludes,
     });
@@ -176,6 +196,8 @@ const toggleEmployeeActive = async (req, res, next) => {
 
 /**
  * PATCH /api/employees/:id/assign-job
+ * Adds a job to the employee's assignment list (many-to-many).
+ * The same job cannot be assigned to the same employee twice.
  */
 const assignJob = async (req, res, next) => {
   try {
@@ -183,25 +205,60 @@ const assignJob = async (req, res, next) => {
     if (!employee) return error(res, 'Employee not found.', 404);
 
     const { jobId } = req.body;
+    if (!jobId) return error(res, 'jobId is required.', 422);
 
-    if (jobId) {
-      const job = await Job.findByPk(jobId);
-      if (!job) return error(res, 'Job not found.', 404);
+    const job = await Job.findByPk(jobId);
+    if (!job) return error(res, 'Job not found.', 404);
 
-      // If the job is assigned to a department, the employee must belong to that department
-      if (job.departmentAssignedToId && employee.departmentId !== job.departmentAssignedToId) {
-        const dept = await Department.findByPk(job.departmentAssignedToId, { attributes: ['name'] });
-        return error(
-          res,
-          `Employee does not belong to the job's assigned department (${dept?.name || job.departmentAssignedToId}).`,
-          422
-        );
-      }
+    // Employee must belong to the department the job is assigned to
+    if (job.departmentAssignedToId && employee.departmentId !== job.departmentAssignedToId) {
+      const dept = await Department.findByPk(job.departmentAssignedToId, { attributes: ['name'] });
+      return error(
+        res,
+        `Employee does not belong to the job's assigned department (${dept?.name || job.departmentAssignedToId}).`,
+        422
+      );
     }
 
-    await employee.update({ jobId: jobId || null });
+    // Check for duplicate assignment
+    const existing = await EmployeeJobAssignment.findOne({ where: { employeeId: employee.id, jobId } });
+    if (existing) {
+      return error(res, `Job ${job.jobNumber} is already assigned to ${employee.fullName}.`, 409);
+    }
+
+    await EmployeeJobAssignment.create({
+      employeeId: employee.id,
+      jobId,
+      assignedById: req.user?.id || null,
+      assignedAt: new Date(),
+    });
+
     const updated = await Employee.findByPk(employee.id, { include: employeeIncludes });
-    return success(res, updated, jobId ? 'Job assigned to employee successfully.' : 'Job removed from employee.');
+    return success(res, updated, 'Job assigned to employee successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/employees/:id/unassign-job
+ * Removes a specific job from the employee's assignment list.
+ */
+const unassignJob = async (req, res, next) => {
+  try {
+    const employee = await Employee.findByPk(req.params.id);
+    if (!employee) return error(res, 'Employee not found.', 404);
+
+    const { jobId } = req.body;
+    if (!jobId) return error(res, 'jobId is required.', 422);
+
+    const assignment = await EmployeeJobAssignment.findOne({ where: { employeeId: employee.id, jobId } });
+    if (!assignment) return error(res, 'This job is not assigned to this employee.', 404);
+
+    await assignment.destroy();
+
+    const updated = await Employee.findByPk(employee.id, { include: employeeIncludes });
+    return success(res, updated, 'Job removed from employee successfully.');
   } catch (err) {
     next(err);
   }
@@ -230,5 +287,6 @@ module.exports = {
   toggleEmployeeActive,
   assignDepartment,
   assignJob,
+  unassignJob,
   deleteEmployee,
 };
