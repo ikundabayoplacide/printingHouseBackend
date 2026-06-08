@@ -698,6 +698,51 @@ const approveJob = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /api/jobs/:id/in-production
+ * Worker updates the inProduction status of a job assigned to their department.
+ */
+const updateInProduction = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (!job.departmentAssignedToId) {
+      return error(res, 'Job has not been assigned to a department yet.', 422);
+    }
+
+    const { inProduction } = req.body;
+    const allowed = ['pending', 'inprogress', 'paused', 'done'];
+    if (!allowed.includes(inProduction)) {
+      return error(res, `Invalid value. Allowed: ${allowed.join(', ')}.`, 422);
+    }
+
+    await job.update({ inProduction });
+
+    const supervisors = await User.findAll({
+      where: { role: 'SUPERVISOR', isActive: true },
+      attributes: ['id'],
+    });
+
+    await Promise.all(
+      supervisors.map((sv) =>
+        notify(
+          sv.id,
+          'Production Status Updated',
+          `Job ${job.jobNumber} production status changed to "${inProduction}" by a worker.`,
+          'JOB_STATUS_CHANGED',
+          'job',
+          job.id
+        )
+      )
+    );
+
+    return success(res, { id: job.id, jobNumber: job.jobNumber, inProduction: job.inProduction }, 'Production status updated.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteJob = async (req, res, next) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -753,6 +798,56 @@ const getJobsByDepartment = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /api/jobs/:id/start  — worker starts the job
+ */
+const startJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+    if (job.startedAt) return error(res, 'Job already started.', 409);
+    await job.update({ startedAt: new Date(), pausedAt: null, inProduction: 'inprogress' });
+    return success(res, { id: job.id, jobNumber: job.jobNumber, startedAt: job.startedAt, inProduction: job.inProduction }, 'Job started.');
+  } catch (err) { next(err); }
+};
+
+/**
+ * PATCH /api/jobs/:id/pause  — worker pauses the job
+ */
+const pauseJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+    await job.update({ pausedAt: new Date(), inProduction: 'paused' });
+    return success(res, { id: job.id, jobNumber: job.jobNumber, pausedAt: job.pausedAt, inProduction: job.inProduction }, 'Job paused.');
+  } catch (err) { next(err); }
+};
+
+/**
+ * PATCH /api/jobs/:id/resume  — worker resumes a paused job
+ */
+const resumeJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+    await job.update({ pausedAt: null, inProduction: 'inprogress' });
+    return success(res, { id: job.id, jobNumber: job.jobNumber, pausedAt: null, inProduction: job.inProduction }, 'Job resumed.');
+  } catch (err) { next(err); }
+};
+
+/**
+ * PATCH /api/jobs/:id/done  — worker marks the job as done
+ */
+const markJobDone = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+    if (job.inProduction === 'done') return error(res, 'Job is already marked as done.', 409);
+    await job.update({ inProduction: 'done', completedAt: new Date() });
+    return success(res, { id: job.id, jobNumber: job.jobNumber, inProduction: 'done', completedAt: job.completedAt }, 'Job marked as done.');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getNextJobNumber,
   getJobByNumber,
@@ -762,6 +857,11 @@ module.exports = {
   updateJob,
   updateJobStatus,
   updateJobState,
+  updateInProduction,
+  startJob,
+  pauseJob,
+  resumeJob,
+  markJobDone,
   approveJob,
   rejectJob,
   assignJob,

@@ -17,6 +17,7 @@ const createEmployeeValidation = [
   body('bankAccount').optional({ nullable: true }).trim(),
   body('hiredAt').optional({ nullable: true }).isISO8601().withMessage('hiredAt must be a valid date'),
   body('departmentId').optional({ nullable: true }).isUUID().withMessage('departmentId must be a valid UUID'),
+  body('password').optional({ nullable: true }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
 ];
 
 const updateEmployeeValidation = [

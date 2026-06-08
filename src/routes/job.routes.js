@@ -10,6 +10,11 @@ const {
   updateJob,
   updateJobStatus,
   updateJobState,
+  updateInProduction,
+  startJob,
+  pauseJob,
+  resumeJob,
+  markJobDone,
   approveJob,
   rejectJob,
   assignJob,
@@ -55,6 +60,11 @@ router.delete('/:id', authorize('ADMIN'), deleteJob);
 // Workflow actions
 router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRINTEMPLOYEE', 'SUPERVISOR'), updateJobStatusValidation, validate, updateJobStatus);
 router.patch('/:id/state', authorize('ADMIN', 'SUPERVISOR'), updateJobStateValidation, validate, updateJobState);
+router.patch('/:id/in-production', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), updateInProduction);
+router.patch('/:id/start', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), startJob);
+router.patch('/:id/pause', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), pauseJob);
+router.patch('/:id/resume', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), resumeJob);
+router.patch('/:id/done', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), markJobDone);
 router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'PRODUCTION_MANAGER', 'DAF'), approveJob);
 router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'PRODUCTION_MANAGER', 'DAF'), rejectJobValidation, validate, rejectJob);
 router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, assignJob);

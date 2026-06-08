@@ -120,6 +120,33 @@ Job.init(
       defaultValue: null,
       comment: 'Production state — set on assignment; supervisor marks it done when department finishes',
     },
+    inProduction: {
+      type: DataTypes.ENUM('pending', 'inprogress', 'paused', 'done'),
+      allowNull: true,
+      defaultValue: null,
+      comment: 'Production progress status updated by the worker',
+    },
+    estimatedTime: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+      comment: 'e.g. "2h 30m"',
+    },
+    startedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
+    pausedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
+    completedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,

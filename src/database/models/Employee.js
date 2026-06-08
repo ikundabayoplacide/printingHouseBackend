@@ -87,6 +87,12 @@ Employee.init(
       allowNull: true,
       comment: 'Currently assigned job for this employee',
     },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      unique: true,
+      comment: 'Linked auth user account',
+    },
   },
   {
     sequelize,

@@ -24,10 +24,15 @@ const Role = require('./Role');
 const Invoice = require('./Invoice');
 const Employee = require('./Employee');
 const EmployeeJobAssignment = require('./EmployeeJobAssignment');
-
+const MaterialRequest = require('./MaterialRequest');
+const MaterialRequestItem = require('./MaterialRequestItem');
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
+
+// Employee → User (linked auth account)
+Employee.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasOne(Employee, { foreignKey: 'userId', as: 'employee' });
 
 // Employee → Department
 Employee.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
@@ -167,8 +172,23 @@ Job.belongsToMany(Employee, {
   as: 'assignedWorkers',
 });
 
+// MaterialRequest → Job
+MaterialRequest.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(MaterialRequest, { foreignKey: 'jobId', as: 'materialRequests' });
+
+// MaterialRequest → Employee
+MaterialRequest.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+Employee.hasMany(MaterialRequest, { foreignKey: 'employeeId', as: 'materialRequests' });
+
+// MaterialRequest → User (respondedBy)
+MaterialRequest.belongsTo(User, { foreignKey: 'respondedBy', as: 'responder' });
+
+// MaterialRequestItem → MaterialRequest
+MaterialRequestItem.belongsTo(MaterialRequest, { foreignKey: 'materialRequestId', as: 'materialRequest' });
+MaterialRequest.hasMany(MaterialRequestItem, { foreignKey: 'materialRequestId', as: 'items' });
+
 // EmployeeJobAssignment → User (assigned by)
 EmployeeJobAssignment.belongsTo(User, { foreignKey: 'assignedById', as: 'assignedBy' });
 User.hasMany(EmployeeJobAssignment, { foreignKey: 'assignedById', as: 'jobAssignments' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment };
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem };

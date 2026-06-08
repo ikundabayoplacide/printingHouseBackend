@@ -1,7 +1,9 @@
 const { Op } = require('sequelize');
 const Employee = require('../database/models/Employee');
+const User = require('../database/models/User');
 const Department = require('../database/models/Department');
 const Job = require('../database/models/Job');
+const Customer = require('../database/models/Customer');
 const EmployeeJobAssignment = require('../database/models/EmployeeJobAssignment');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
@@ -78,18 +80,40 @@ const getEmployeeById = async (req, res, next) => {
 
 /**
  * POST /api/employees
+ * Also creates a linked User account if password is provided.
  */
 const createEmployee = async (req, res, next) => {
   try {
     const {
       fullName, phoneNumber, gender, dateOfBirth,
       nid, address, email, supportContact, bankAccount,
-      contractSalary, contractType, hiredAt, departmentId,
+      contractSalary, contractType, hiredAt, departmentId, password,
     } = req.body;
 
     if (departmentId) {
       const dept = await Department.findByPk(departmentId);
       if (!dept) return error(res, 'Department not found.', 404);
+    }
+
+    // If password provided, create a linked User account first
+    let userId = null;
+    if (password) {
+      if (!email) return error(res, 'email is required when creating a user account (password was provided).', 422);
+
+      const existing = await User.findOne({ where: { email: email.toLowerCase().trim() } });
+      if (existing) return error(res, 'A user account with this email already exists.', 409);
+
+      const user = await User.create({
+        name: fullName,
+        email,
+        password,
+        phone: phoneNumber || null,
+        gender: gender || null,
+        departmentId: departmentId || null,
+        role: 'WORKER',
+        isActive: true,
+      });
+      userId = user.id;
     }
 
     const employee = await Employee.create({
@@ -103,6 +127,7 @@ const createEmployee = async (req, res, next) => {
       contractType: contractType || 'FULL_TIME',
       hiredAt: hiredAt || null,
       departmentId: departmentId || null,
+      userId,
     });
 
     const created = await Employee.findByPk(employee.id, { include: employeeIncludes });
@@ -123,7 +148,7 @@ const updateEmployee = async (req, res, next) => {
     const {
       fullName, phoneNumber, gender, dateOfBirth,
       nid, address, email, supportContact, bankAccount,
-      contractSalary, contractType, hiredAt, departmentId, isActive,
+      contractSalary, contractType, hiredAt, departmentId, isActive, userId,
     } = req.body;
 
     if (departmentId) {
@@ -146,6 +171,7 @@ const updateEmployee = async (req, res, next) => {
       ...(hiredAt !== undefined && { hiredAt }),
       ...(departmentId !== undefined && { departmentId }),
       ...(isActive !== undefined && { isActive }),
+      ...(userId !== undefined && { userId }),
     });
 
     const updated = await Employee.findByPk(employee.id, { include: employeeIncludes });
@@ -279,9 +305,76 @@ const deleteEmployee = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/employees/me
+ * Returns the employee profile linked to the logged-in user.
+ */
+const getMyProfile = async (req, res, next) => {
+  try {
+    const employee = await Employee.findOne({
+      where: { userId: req.user.id },
+      include: employeeIncludes,
+    });
+    if (!employee) return error(res, 'No employee profile linked to your account.', 404);
+    return success(res, employee);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const assignedJobIncludes = [
+  { model: Customer, as: 'customer', attributes: ['id', 'name'] },
+];
+
+/**
+ * GET /api/employees/:id/jobs
+ * Returns all jobs assigned to the employee.
+ * Optional ?status=done&date=today filters.
+ */
+const getEmployeeJobs = async (req, res, next) => {
+  try {
+    const employee = await Employee.findByPk(req.params.id);
+    if (!employee) return error(res, 'Employee not found.', 404);
+
+    const { status, date } = req.query;
+
+    const jobWhere = {};
+    if (status) jobWhere.inProduction = status;
+    if (date === 'today') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      jobWhere.updatedAt = { [Op.between]: [start, end] };
+    }
+
+    const jobs = await Job.findAll({
+      include: [
+        {
+          model: Employee,
+          as: 'assignedWorkers',
+          where: { id: req.params.id },
+          attributes: [],
+          through: { attributes: [] },
+          required: true,
+        },
+        ...assignedJobIncludes,
+      ],
+      where: jobWhere,
+      order: [['dueDate', 'ASC']],
+    });
+
+    return success(res, jobs);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllEmployees,
   getEmployeeById,
+  getMyProfile,
+  getEmployeeJobs,
   createEmployee,
   updateEmployee,
   toggleEmployeeActive,
