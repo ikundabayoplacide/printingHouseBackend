@@ -54,7 +54,7 @@ Customer.init(
       allowNull: true,
     },
     type: {
-      type: DataTypes.ENUM('BUSINESS', 'VISITOR', 'BOUTIQUE'),
+      type: DataTypes.ENUM('BUSINESS', 'VISITOR', 'BOUTIQUE', 'HOBE'),
       defaultValue: 'VISITOR',
       allowNull: false,
     },

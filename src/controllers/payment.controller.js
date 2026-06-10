@@ -47,13 +47,12 @@ const createPayment = async (req, res, next) => {
 
     const receiptNo = await Payment.generateReceiptNo();
 
-    // Check if a pending payment record already exists for this job (auto-created at job creation)
+    // Update the pending (no receiptNo) record if one exists, otherwise create
     const existing = await Payment.findOne({ where: { jobId, receiptNo: null } });
 
     let payment;
     if (existing) {
-      // Update the pending record
-      await existing.update({
+      payment = await existing.update({
         recordedById: req.user.id,
         receivedById,
         verifiedById: verifiedById || null,
@@ -65,9 +64,7 @@ const createPayment = async (req, res, next) => {
         paymentNote: paymentNote || null,
         paidAt: new Date(),
       });
-      payment = existing;
     } else {
-      // Create a new payment record
       payment = await Payment.create({
         jobId,
         recordedById: req.user.id,

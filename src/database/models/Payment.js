@@ -7,19 +7,19 @@ class Payment extends Model {
    */
   static async generateReceiptNo() {
     const year = new Date().getFullYear();
-    const last = await Payment.findOne({
+    const rows = await Payment.findAll({
       where: { receiptNo: { [Op.like]: `RCP-${year}-%` } },
-      order: [['createdAt', 'DESC']],
+      attributes: ['receiptNo'],
     });
 
-    let nextNumber = 1;
-    if (last) {
-      const parts = last.receiptNo.split('-');
-      const lastSeq = parseInt(parts[2], 10);
-      if (!isNaN(lastSeq)) nextNumber = lastSeq + 1;
+    let maxSeq = 0;
+    for (const row of rows) {
+      const parts = row.receiptNo.split('-');
+      const seq = parseInt(parts[2], 10);
+      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
     }
 
-    return `RCP-${year}-${String(nextNumber).padStart(3, '0')}`;
+    return `RCP-${year}-${String(maxSeq + 1).padStart(3, '0')}`;
   }
 }
 

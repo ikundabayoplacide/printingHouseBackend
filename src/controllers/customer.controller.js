@@ -68,7 +68,7 @@ const createCustomer = async (req, res, next) => {
     });
 
     // Notify all SALESMANAGER users when a BUSINESS or BOUTIQUE customer registers
-    if (customer.type === 'BUSINESS' || customer.type === 'BOUTIQUE') {
+    if (customer.type === 'BUSINESS' || customer.type === 'BOUTIQUE' || customer.type === 'HOBE') {
       const salesManagers = await User.findAll({
         where: { role: 'SALESMANAGER', isActive: true },
         attributes: ['id'],
