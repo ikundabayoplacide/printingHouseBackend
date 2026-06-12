@@ -494,9 +494,39 @@ const options = {
             currentStock: { type: 'number', format: 'float', example: 50 },
             alarmStock: { type: 'number', format: 'float', example: 10 },
             stockStatus: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'], example: 'in-stock' },
+            type: { type: 'string', enum: ['boutique', 'hobe', 'general'], example: 'general', description: 'Department this stock item belongs to. HOBE users only see hobe-type items.' },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateStockItemRequest: {
+          type: 'object',
+          required: ['itemName'],
+          properties: {
+            itemName: { type: 'string', example: 'A4 Paper Reams' },
+            category: { type: 'string', example: 'Paper' },
+            unit: { type: 'string', example: 'reams' },
+            description: { type: 'string' },
+            supplier: { type: 'string', example: 'ABC Supplies' },
+            unitCost: { type: 'number', format: 'float', minimum: 0, example: 5000 },
+            currentStock: { type: 'number', format: 'float', minimum: 0, example: 0, description: 'Initial stock quantity (default 0)' },
+            alarmStock: { type: 'number', format: 'float', minimum: 0, example: 5, description: 'Low-stock threshold (default 5)' },
+            type: { type: 'string', enum: ['boutique', 'hobe', 'general'], example: 'general', description: 'Department this item belongs to. Defaults to general.' },
+          },
+        },
+        UpdateStockItemRequest: {
+          type: 'object',
+          properties: {
+            itemName: { type: 'string', example: 'A4 Paper Reams' },
+            category: { type: 'string', example: 'Paper' },
+            unit: { type: 'string', example: 'reams' },
+            description: { type: 'string' },
+            supplier: { type: 'string' },
+            unitCost: { type: 'number', format: 'float', minimum: 0 },
+            alarmStock: { type: 'number', format: 'float', minimum: 0 },
+            type: { type: 'string', enum: ['boutique', 'hobe', 'general'], description: 'Change the department this item belongs to.' },
+            isActive: { type: 'boolean' },
           },
         },
         StockEntry: {
@@ -2095,10 +2125,12 @@ const options = {
         get: {
           tags: ['Stock'],
           summary: 'Get all stock items (paginated)',
+          description: 'HOBE role users automatically see only items with type=hobe. Other roles can filter by type explicitly.',
           parameters: [
             { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
             { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
             { in: 'query', name: 'category', schema: { type: 'string' } },
+            { in: 'query', name: 'type', schema: { type: 'string', enum: ['boutique', 'hobe', 'general'] }, description: 'Filter by stock item type. HOBE role always defaults to hobe.' },
             { in: 'query', name: 'stockStatus', schema: { type: 'string', enum: ['in-stock', 'low-stock', 'out-of-stock'] } },
             { in: 'query', name: 'search', schema: { type: 'string' } },
           ],
@@ -2109,7 +2141,7 @@ const options = {
         post: {
           tags: ['Stock'],
           summary: 'Create a stock item (ADMIN, STOCK)',
-          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['itemName'], properties: { itemName: { type: 'string' }, category: { type: 'string' }, unit: { type: 'string' }, description: { type: 'string' }, supplier: { type: 'string' }, unitCost: { type: 'number' }, currentStock: { type: 'number' }, alarmStock: { type: 'number' } } } } } },
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateStockItemRequest' } } } },
           responses: {
             201: { description: 'Stock item created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockItem' } } }] } } } },
           },
@@ -2129,7 +2161,7 @@ const options = {
           tags: ['Stock'],
           summary: 'Update a stock item (ADMIN, STOCK)',
           parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
-          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { itemName: { type: 'string' }, category: { type: 'string' }, unit: { type: 'string' }, supplier: { type: 'string' }, unitCost: { type: 'number' }, alarmStock: { type: 'number' }, isActive: { type: 'boolean' } } } } } },
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateStockItemRequest' } } } },
           responses: {
             200: { description: 'Stock item updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockItem' } } }] } } } },
             404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
@@ -2189,6 +2221,7 @@ const options = {
           requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['stockItemId', 'quantityOut'], properties: { stockItemId: { type: 'string', format: 'uuid' }, quantityOut: { type: 'number', minimum: 0.01 }, jobId: { type: 'string', format: 'uuid' }, dossierNo: { type: 'string' }, reason: { type: 'string' }, notes: { type: 'string' }, sortieDate: { type: 'string', format: 'date-time' } } } } } },
           responses: {
             201: { description: 'Sortie request created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/StockSortie' } } }] } } } },
+            403: { description: 'HOBE users can only request hobe-type stock items', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             404: { description: 'Stock item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             422: { description: 'Insufficient stock', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },

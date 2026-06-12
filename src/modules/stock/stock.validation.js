@@ -9,6 +9,10 @@ const createItemValidation = [
   body('unitCost').optional().isFloat({ min: 0 }).withMessage('Unit cost must be a positive number'),
   body('currentStock').optional().isFloat({ min: 0 }).withMessage('Current stock must be a positive number'),
   body('alarmStock').optional().isFloat({ min: 0 }).withMessage('Alarm stock must be a positive number'),
+  body('type')
+    .optional()
+    .isIn(['boutique', 'hobe', 'general'])
+    .withMessage('type must be one of: boutique, hobe, general'),
 ];
 
 const updateItemValidation = [
@@ -20,6 +24,10 @@ const updateItemValidation = [
   body('unitCost').optional().isFloat({ min: 0 }).withMessage('Unit cost must be a positive number'),
   body('alarmStock').optional().isFloat({ min: 0 }).withMessage('Alarm stock must be a positive number'),
   body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
+  body('type')
+    .optional()
+    .isIn(['boutique', 'hobe', 'general'])
+    .withMessage('type must be one of: boutique, hobe, general'),
 ];
 
 const createEntryValidation = [

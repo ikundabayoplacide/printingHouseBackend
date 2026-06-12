@@ -63,6 +63,12 @@ StockItem.init(
       defaultValue: true,
       allowNull: false,
     },
+    type: {
+      type: DataTypes.ENUM('boutique', 'hobe', 'general'),
+      allowNull: false,
+      defaultValue: 'general',
+      comment: 'Indicates which department this stock item belongs to',
+    },
   },
   {
     sequelize,

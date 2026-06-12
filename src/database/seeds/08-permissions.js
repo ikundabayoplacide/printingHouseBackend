@@ -95,6 +95,13 @@ const PERMISSIONS = [
   { resource: 'boutique', action: 'create' },
   { resource: 'boutique', action: 'edit' },
 
+  // Hobe
+  { resource: 'hobe', action: 'view' },
+  { resource: 'hobe', action: 'create' },
+  { resource: 'hobe', action: 'edit' },
+  { resource: 'hobe', action: 'delete' },
+  { resource: 'hobe', action: 'sell' },
+
   // Deliveries
   { resource: 'deliveries', action: 'view' },
   { resource: 'deliveries', action: 'edit' },
@@ -242,6 +249,15 @@ const ROLE_PERMISSIONS = {
     'timelogs.view', 'timelogs.create',
     'stock.view',
     'reports.view',
+  ],
+
+  HOBE: [
+    'dashboard.view',
+    'hobe.view',
+    'hobe.create',
+    'hobe.edit',
+    'hobe.delete',
+    'hobe.sell',
   ],
 };
 

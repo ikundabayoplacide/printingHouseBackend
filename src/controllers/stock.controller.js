@@ -25,10 +25,14 @@ const sortieIncludes = [
 const getAllItems = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { category, stockStatus, search } = req.query;
+    const { category, stockStatus, search, type } = req.query;
 
     const where = { isActive: true };
     if (category) where.category = category;
+    if (type) where.type = type;
+
+    // HOBE role can only see hobe stock items
+    if (req.user.role === 'HOBE') where.type = 'hobe';
 
     if (search) {
       where[Op.or] = [
@@ -66,11 +70,12 @@ const getItemById = async (req, res, next) => {
 
 const createItem = async (req, res, next) => {
   try {
-    const { itemName, category, unit, description, supplier, unitCost, currentStock, alarmStock } = req.body;
+    const { itemName, category, unit, description, supplier, unitCost, currentStock, alarmStock, type } = req.body;
     const item = await StockItem.create({
       itemName, category, unit, description, supplier, unitCost,
       currentStock: currentStock || 0,
       alarmStock: alarmStock || 5,
+      type: type || 'general',
     });
     return success(res, { ...item.toJSON(), stockStatus: item.stockStatus }, 'Stock item created successfully.', 201);
   } catch (err) {
@@ -83,7 +88,7 @@ const updateItem = async (req, res, next) => {
     const item = await StockItem.findByPk(req.params.id);
     if (!item) return error(res, 'Stock item not found.', 404);
 
-    const { itemName, category, unit, description, supplier, unitCost, alarmStock, isActive } = req.body;
+    const { itemName, category, unit, description, supplier, unitCost, alarmStock, isActive, type } = req.body;
     await item.update({
       ...(itemName !== undefined && { itemName }),
       ...(category !== undefined && { category }),
@@ -93,6 +98,7 @@ const updateItem = async (req, res, next) => {
       ...(unitCost !== undefined && { unitCost }),
       ...(alarmStock !== undefined && { alarmStock }),
       ...(isActive !== undefined && { isActive }),
+      ...(type !== undefined && { type }),
     });
     return success(res, { ...item.toJSON(), stockStatus: item.stockStatus }, 'Stock item updated successfully.');
   } catch (err) {
@@ -213,6 +219,11 @@ const createSortie = async (req, res, next) => {
 
     const item = await StockItem.findByPk(stockItemId);
     if (!item) return error(res, 'Stock item not found.', 404);
+
+    // HOBE role can only request sorties for hobe-type stock items
+    if (req.user.role === 'HOBE' && item.type !== 'hobe') {
+      return error(res, 'You can only request stock items designated for hobe.', 403);
+    }
 
     const stockBefore = parseFloat(item.currentStock);
     const qty = parseFloat(quantityOut);

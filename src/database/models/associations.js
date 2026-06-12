@@ -30,6 +30,8 @@ const BoutiqueStockRequest = require('./BoutiqueStockRequest');
 const BoutiqueStockRequestItem = require('./BoutiqueStockRequestItem');
 const BoutiqueSale = require('./BoutiqueSale');
 const Report = require('./Report');
+const Hobe = require('./Hobe');
+const HobeSale = require('./HobeSale');
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
@@ -226,4 +228,20 @@ Customer.hasMany(BoutiqueSale, { foreignKey: 'customerId', as: 'boutiqueSales' }
 Report.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(Report, { foreignKey: 'createdById', as: 'reports' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report };
+// Hobe → User (created by)
+Hobe.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+User.hasMany(Hobe, { foreignKey: 'createdById', as: 'hobes' });
+
+// HobeSale → Hobe
+HobeSale.belongsTo(Hobe, { foreignKey: 'hobeId', as: 'hobe' });
+Hobe.hasMany(HobeSale, { foreignKey: 'hobeId', as: 'sales' });
+
+// HobeSale → User (sold by)
+HobeSale.belongsTo(User, { foreignKey: 'soldById', as: 'soldBy' });
+User.hasMany(HobeSale, { foreignKey: 'soldById', as: 'hobeSales' });
+
+// HobeSale → Customer (optional)
+HobeSale.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Customer.hasMany(HobeSale, { foreignKey: 'customerId', as: 'hobeSales' });
+
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale };
