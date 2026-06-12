@@ -22,7 +22,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
     console.log('🔌 Connecting to database...');
     await sequelize.authenticate();
 
-    console.log('💣 Dropping all tables with CASCADE...');
+    console.log('💣 Dropping all tables and types with CASCADE...');
     await sequelize.query(`
       DO $$ DECLARE
         r RECORD;
@@ -30,9 +30,12 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
         FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
           EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
         END LOOP;
+        FOR r IN (SELECT typname FROM pg_type JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace WHERE pg_namespace.nspname = 'public' AND pg_type.typtype = 'e') LOOP
+          EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
+        END LOOP;
       END $$;
     `);
-    console.log('✅ All tables dropped.');
+    console.log('✅ All tables and enum types dropped.');
 
     await sequelize.close();
 

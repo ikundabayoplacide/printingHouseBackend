@@ -45,6 +45,14 @@ Customer.init(
       allowNull: true,
       comment: 'Tax Identification Number for company customers',
     },
+    companyType: {
+      type: DataTypes.ENUM('private', 'public'),
+      allowNull: true,
+    },
+    groupeSize: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     address: {
       type: DataTypes.STRING,
       allowNull: true,
