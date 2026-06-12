@@ -1,4 +1,3 @@
-const path = require('path');
 const Report = require('../database/models/Report');
 const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
@@ -25,7 +24,7 @@ const createReport = async (req, res, next) => {
     }
 
     const attachmentUrl = req.file
-      ? `/${path.join('uploads', 'reports', req.file.filename).replace(/\\/g, '/')}`
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
       : null;
 
     const report = await Report.create({
@@ -39,6 +38,27 @@ const createReport = async (req, res, next) => {
 
     const created = await Report.findByPk(report.id, { include: reportIncludes });
     return success(res, created, 'Report created successfully.', 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/reports/my
+ */
+const getMyReports = async (req, res, next) => {
+  try {
+    const { page, limit, skip } = getPagination(req.query);
+
+    const { count, rows } = await Report.findAndCountAll({
+      where: { createdById: req.user.id },
+      offset: skip,
+      limit,
+      order: [['createdAt', 'DESC']],
+      include: reportIncludes,
+    });
+
+    return paginated(res, rows, count, page, limit);
   } catch (err) {
     next(err);
   }
@@ -97,7 +117,7 @@ const updateReport = async (req, res, next) => {
     }
 
     const attachmentUrl = req.file
-      ? `/${path.join('uploads', 'reports', req.file.filename).replace(/\\/g, '/')}`
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
       : report.attachmentUrl;
 
     await report.update({
@@ -129,4 +149,4 @@ const deleteReport = async (req, res, next) => {
   }
 };
 
-module.exports = { createReport, getAllReports, getReportById, updateReport, deleteReport };
+module.exports = { createReport, getAllReports, getReportById, updateReport, deleteReport, getMyReports };

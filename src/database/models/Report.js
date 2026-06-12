@@ -28,7 +28,7 @@ Report.init(
       allowNull: true,
     },
     attachmentUrl: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
       field: 'attachment_url',
     },

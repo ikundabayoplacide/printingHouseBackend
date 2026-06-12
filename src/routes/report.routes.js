@@ -1,21 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
 const env = require('../config/env');
 
-const { createReport, getAllReports, getReportById, updateReport, deleteReport } = require('../controllers/report.controller');
+const { createReport, getAllReports, getReportById, updateReport, deleteReport, getMyReports } = require('../controllers/report.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(env.uploadPath, 'reports'));
-  },
-  filename: (req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `report-${unique}${path.extname(file.originalname)}`);
-  },
-});
 
 const allowedMimes = [
   'application/pdf',
@@ -29,7 +18,7 @@ const allowedMimes = [
 ];
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: env.maxFileSize },
   fileFilter: (req, file, cb) => {
     allowedMimes.includes(file.mimetype)
@@ -40,6 +29,7 @@ const upload = multer({
 
 router.use(authenticate);
 
+router.get('/my', getMyReports);
 router.get('/', getAllReports);
 router.get('/:id', getReportById);
 router.post('/', upload.single('attachment'), createReport);
