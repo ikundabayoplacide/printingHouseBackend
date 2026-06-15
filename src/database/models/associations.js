@@ -32,6 +32,20 @@ const BoutiqueSale = require('./BoutiqueSale');
 const Report = require('./Report');
 const Hobe = require('./Hobe');
 const HobeSale = require('./HobeSale');
+const JobDocument = require('./JobDocument');
+const ProcurementLead = require('./ProcurementLead');
+// ProcurementLead → User (created by)
+ProcurementLead.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+User.hasMany(ProcurementLead, { foreignKey: 'createdById', as: 'procurementLeads' });
+
+// JobDocument → Job
+JobDocument.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(JobDocument, { foreignKey: 'jobId', as: 'documents' });
+
+// JobDocument → User (uploaded by)
+JobDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+User.hasMany(JobDocument, { foreignKey: 'uploadedById', as: 'uploadedDocuments' });
+
 // User → Department
 User.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
@@ -244,4 +258,4 @@ User.hasMany(HobeSale, { foreignKey: 'soldById', as: 'hobeSales' });
 HobeSale.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
 Customer.hasMany(HobeSale, { foreignKey: 'customerId', as: 'hobeSales' });
 
-module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale };
+module.exports = { User, Customer, Job, Department, Notification, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Quotation, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead };

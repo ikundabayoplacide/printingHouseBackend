@@ -37,6 +37,8 @@ const {
 const { validate } = require('../middlewares/validate.middleware');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/role.middleware');
+const upload = require('../config/multer');
+const jobDocumentRoutes = require('./jobDocument.routes');
 
 // All job routes require authentication
 router.use(authenticate);
@@ -50,7 +52,10 @@ router.get('/number/:jobNumber', getJobByNumber);
 // List & create
 router.get('/completed-and-paid', getCompletedAndPaidJobs);
 router.get('/', getAllJobs);
-router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), createJobValidation, validate, createJob);
+router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), upload.array('documents', 10), createJobValidation, validate, createJob);
+
+// Job documents sub-routes
+router.use('/:jobId/documents', jobDocumentRoutes);
 
 // Single job CRUD
 router.get('/:id', getJobById);

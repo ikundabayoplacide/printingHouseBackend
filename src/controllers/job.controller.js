@@ -7,6 +7,7 @@ const Payment = require('../database/models/Payment');
 const JobItem = require('../database/models/JobItem');
 const StockItem = require('../database/models/StockItem');
 const Quotation = require('../database/models/Quotation');
+const JobDocument = require('../database/models/JobDocument');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 const notify = require('../utils/notification.service');
@@ -18,6 +19,7 @@ const jobIncludes = [
   { model: Department, as: 'departmentAssignedTo', attributes: ['id', 'name'] },
   { model: Payment, as: 'payments', attributes: ['id', 'paymentMethod', 'paymentState', 'amountPaid', 'balance', 'receiptNo', 'paidAt'] },
   { model: JobItem, as: 'jobItems', include: [{ model: StockItem, as: 'stockItem', attributes: ['id', 'itemName', 'category', 'unit', 'currentStock'] }] },
+  { model: JobDocument, as: 'documents', attributes: ['id', 'fileName', 'mimeType', 'fileUrl', 'uploadedById', 'createdAt'] },
 ];
 
 /**
@@ -181,6 +183,21 @@ const createJob = async (req, res, next) => {
         paymentNote: null,
         paidAt: new Date(),
       });
+    }
+
+    // Save uploaded documents if any
+    if (req.files && req.files.length > 0) {
+      await Promise.all(
+        req.files.map((file) =>
+          JobDocument.create({
+            jobId: job.id,
+            uploadedById: req.user.id,
+            fileName: file.originalname,
+            mimeType: file.mimetype,
+            fileUrl: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+          })
+        )
+      );
     }
 
     // Auto-create a draft quotation

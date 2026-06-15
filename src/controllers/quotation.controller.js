@@ -88,7 +88,7 @@ const getQuotationsByJob = async (req, res, next) => {
  */
 const createQuotation = async (req, res, next) => {
   try {
-    const { jobId, subtotal, taxRate, discount, validUntil, notes, terms } = req.body;
+    const { jobId, subtotal, validUntil, notes, terms } = req.body;
 
     const job = await Job.findByPk(jobId, {
       include: [{ model: Customer, as: 'customer' }],
@@ -96,10 +96,6 @@ const createQuotation = async (req, res, next) => {
     if (!job) return error(res, 'Job not found.', 404);
 
     const sub = parseFloat(subtotal || job.amount || 0);
-    const tax = parseFloat(taxRate || 0);
-    const disc = parseFloat(discount || 0);
-    const taxAmount = parseFloat(((sub * tax) / 100).toFixed(2));
-    const totalAmount = parseFloat((sub + taxAmount - disc).toFixed(2));
 
     const quotationNo = await Quotation.generateQuotationNo();
 
@@ -109,10 +105,10 @@ const createQuotation = async (req, res, next) => {
       customerId: job.customerId,
       createdById: req.user.id,
       subtotal: sub,
-      taxRate: tax,
-      taxAmount,
-      discount: disc,
-      totalAmount,
+      taxRate: 0,
+      taxAmount: 0,
+      discount: 0,
+      totalAmount: sub,
       status: 'draft',
       validUntil: validUntil || null,
       notes: notes || null,

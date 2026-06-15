@@ -37,6 +37,7 @@ const materialRequestRoutes = require('./src/routes/materialRequest.routes');
 const boutiqueStockRequestRoutes = require('./src/routes/boutiqueStockRequest.routes');
 const reportRoutes = require('./src/routes/report.routes');
 const hobeRoutes = require('./src/routes/hobe.routes');
+const procurementRoutes = require('./src/routes/procurement.routes');
 
 const app = express();
 
@@ -85,6 +86,7 @@ app.use('/api/material-requests', materialRequestRoutes);
 app.use('/api/boutique-stock-requests', boutiqueStockRequestRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/hobes', hobeRoutes);
+app.use('/api/procurement', procurementRoutes);
 
 // 404 handler
 app.use(notFound);
