@@ -1,4 +1,4 @@
-const { Op, fn, col, literal } = require('sequelize');
+const { Op } = require('sequelize');
 const ProcurementLead = require('../database/models/ProcurementLead');
 const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
