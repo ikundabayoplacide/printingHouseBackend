@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const User = require('../database/models/User');
+const Employee = require('../database/models/Employee');
 const Department = require('../database/models/Department');
 const Job = require('../database/models/Job');
 const { success, error, paginated } = require('../utils/apiResponse');
@@ -17,6 +18,19 @@ const createUser = async (req, res, next) => {
     if (existing) return error(res, 'Email already in use.', 409);
 
     const user = await User.create({ name, email, password, role, phone, departmentId, gender });
+
+    if (role === 'WORKER') {
+      await Employee.create({
+        fullName: name,
+        phoneNumber: phone || 'N/A',
+        gender: gender || 'MALE',
+        dateOfBirth: '2000-01-01',
+        address: 'N/A',
+        email: email || null,
+        departmentId: departmentId || null,
+        userId: user.id,
+      });
+    }
 
     return success(
       res,
