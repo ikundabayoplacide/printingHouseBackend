@@ -307,7 +307,8 @@ const deleteEmployee = async (req, res, next) => {
 
 /**
  * GET /api/employees/me
- * Returns the employee profile linked to the logged-in user.
+ * Returns the linked employee profile if it exists,
+ * otherwise falls back to the authenticated user's own data.
  */
 const getMyProfile = async (req, res, next) => {
   try {
@@ -315,8 +316,14 @@ const getMyProfile = async (req, res, next) => {
       where: { userId: req.user.id },
       include: employeeIncludes,
     });
-    if (!employee) return error(res, 'No employee profile linked to your account.', 404);
-    return success(res, employee);
+
+    if (employee) return success(res, employee);
+
+    // No employee record — return user data so WORKER role users are not blocked
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'departmentId', 'isActive', 'createdAt'],
+    });
+    return success(res, { ...user.toJSON(), employeeProfile: null });
   } catch (err) {
     next(err);
   }
