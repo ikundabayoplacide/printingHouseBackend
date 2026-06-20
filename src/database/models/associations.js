@@ -36,6 +36,7 @@ const HobeSale = require('./HobeSale');
 const JobDocument = require('./JobDocument');
 const ProcurementLead = require('./ProcurementLead');
 const ProcurementLeadDocument = require('./ProcurementLeadDocument');
+const RecoveryRecord = require('./RecoveryRecord');
 // ProcurementLead → User (created by)
 ProcurementLead.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(ProcurementLead, { foreignKey: 'createdById', as: 'procurementLeads' });
@@ -276,4 +277,16 @@ User.hasMany(HobeSale, { foreignKey: 'soldById', as: 'hobeSales' });
 HobeSale.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
 Customer.hasMany(HobeSale, { foreignKey: 'customerId', as: 'hobeSales' });
 
-module.exports = { User, Customer, Job, Department, Notification, NotificationRead, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Proforma, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead, ProcurementLeadDocument };
+// RecoveryRecord → Job
+RecoveryRecord.belongsTo(Job, { foreignKey: 'jobId', as: 'job' });
+Job.hasMany(RecoveryRecord, { foreignKey: 'jobId', as: 'recoveryRecords' });
+
+// RecoveryRecord → Customer
+RecoveryRecord.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Customer.hasMany(RecoveryRecord, { foreignKey: 'customerId', as: 'recoveryRecords' });
+
+// RecoveryRecord → User (recorded by)
+RecoveryRecord.belongsTo(User, { foreignKey: 'recordedById', as: 'recordedBy' });
+User.hasMany(RecoveryRecord, { foreignKey: 'recordedById', as: 'recordedRecoveries' });
+
+module.exports = { User, Customer, Job, Department, Notification, NotificationRead, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Proforma, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead, ProcurementLeadDocument, RecoveryRecord };

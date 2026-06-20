@@ -216,6 +216,8 @@ const ROLE_PERMISSIONS = {
     'taxes.view', 'taxes.create', 'taxes.edit', 'taxes.export',
     'recovery.view', 'recovery.create', 'recovery.edit',
     'procurement.view', 'procurement.create', 'procurement.edit',
+    'boutique.view',
+    'hobe.view',
   ],
 
   PRODUCTION_MANAGER: [

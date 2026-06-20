@@ -196,11 +196,7 @@ const getHobeSales = async (req, res, next) => {
       offset: skip,
       limit,
       order: [['createdAt', 'DESC']],
-      include: [
-        { model: Hobe, as: 'hobe', attributes: ['id', 'hobeNo', 'nameOfHobe'] },
-        { model: User, as: 'soldBy', attributes: ['id', 'name', 'email'] },
-        { model: Customer, as: 'customer', attributes: ['id', 'name', 'phone'], required: false },
-      ],
+      include: saleIncludes,
     });
 
     return paginated(res, rows, count, page, limit);
@@ -239,6 +235,12 @@ const getHobeSalesSummary = async (req, res, next) => {
   }
 };
 
+const saleIncludes = [
+  { model: Hobe, as: 'hobe', attributes: ['id', 'hobeNo', 'nameOfHobe'] },
+  { model: User, as: 'soldBy', attributes: ['id', 'name', 'email'] },
+  { model: Customer, as: 'customer', attributes: ['id', 'name', 'phone'], required: false },
+];
+
 const updateHobeSale = async (req, res, next) => {
   try {
     const sale = await HobeSale.findByPk(req.params.saleId);
@@ -254,7 +256,8 @@ const updateHobeSale = async (req, res, next) => {
       ...paymentFields,
     });
 
-    return success(res, sale, 'Sale updated successfully.');
+    const updated = await HobeSale.findByPk(sale.id, { include: saleIncludes });
+    return success(res, updated, 'Sale updated successfully.');
   } catch (err) {
     next(err);
   }

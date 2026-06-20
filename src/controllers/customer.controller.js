@@ -1,6 +1,5 @@
 const { Op } = require('sequelize');
 const Customer = require('../database/models/Customer');
-const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 const notify = require('../utils/notification.service');
