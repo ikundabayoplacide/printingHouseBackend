@@ -37,6 +37,7 @@ const JobDocument = require('./JobDocument');
 const ProcurementLead = require('./ProcurementLead');
 const ProcurementLeadDocument = require('./ProcurementLeadDocument');
 const RecoveryRecord = require('./RecoveryRecord');
+const LeaveRequest = require('./LeaveRequest');
 // ProcurementLead → User (created by)
 ProcurementLead.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(ProcurementLead, { foreignKey: 'createdById', as: 'procurementLeads' });
@@ -288,5 +289,13 @@ Customer.hasMany(RecoveryRecord, { foreignKey: 'customerId', as: 'recoveryRecord
 // RecoveryRecord → User (recorded by)
 RecoveryRecord.belongsTo(User, { foreignKey: 'recordedById', as: 'recordedBy' });
 User.hasMany(RecoveryRecord, { foreignKey: 'recordedById', as: 'recordedRecoveries' });
+
+// LeaveRequest → User (requester)
+LeaveRequest.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(LeaveRequest, { foreignKey: 'userId', as: 'leaveRequests' });
+
+// LeaveRequest → User (reviewer)
+LeaveRequest.belongsTo(User, { foreignKey: 'reviewedById', as: 'reviewedBy' });
+User.hasMany(LeaveRequest, { foreignKey: 'reviewedById', as: 'reviewedLeaves' });
 
 module.exports = { User, Customer, Job, Department, Notification, NotificationRead, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Proforma, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead, ProcurementLeadDocument, RecoveryRecord };

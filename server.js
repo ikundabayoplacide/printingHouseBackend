@@ -14,6 +14,9 @@ const swaggerSpec = require('./src/config/swagger');
 // Register model associations before routes are loaded
 require('./src/database/models/associations');
 
+// Register cron jobs
+require('./src/utils/leaveCron');
+
 // Route imports
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
@@ -39,6 +42,7 @@ const reportRoutes = require('./src/routes/report.routes');
 const hobeRoutes = require('./src/routes/hobe.routes');
 const procurementRoutes = require('./src/routes/procurement.routes');
 const recoveryRoutes = require('./src/routes/recovery.routes');
+const leaveRoutes = require('./src/routes/leave.routes');
 
 const app = express();
 
@@ -89,6 +93,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/hobes', hobeRoutes);
 app.use('/api/procurement', procurementRoutes);
 app.use('/api/recovery', recoveryRoutes);
+app.use('/api/leaves', leaveRoutes);
 
 // 404 handler
 app.use(notFound);

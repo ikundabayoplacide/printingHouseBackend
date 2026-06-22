@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const Notification = require('../database/models/Notification');
 const NotificationRead = require('../database/models/NotificationRead');
 const User = require('../database/models/User');
