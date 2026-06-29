@@ -16,7 +16,7 @@ router.use(authenticate);
 
 router.get('/', getAllProducts);
 router.get('/:id', getProductById);
-router.post('/', authorize('ADMIN', 'STOREKEEPER'), createProductValidation, validate, createProduct);
+router.post('/', authorize('ADMIN', 'STOREKEEPER', 'RECEPTIONIST'), createProductValidation, validate, createProduct);
 router.put('/:id', authorize('ADMIN', 'STOREKEEPER'), updateProductValidation, validate, updateProduct);
 router.delete('/:id', authorize('ADMIN'), deleteProduct);
 
