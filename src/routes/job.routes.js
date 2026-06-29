@@ -53,7 +53,7 @@ router.get('/number/:jobNumber', getJobByNumber);
 // List & create
 router.get('/completed-and-paid', getCompletedAndPaidJobs);
 router.get('/', getAllJobs);
-router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), upload.array('documents', 10), createJobValidation, validate, createJob);
+router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'HOBE'), upload.array('documents', 10), createJobValidation, validate, createJob);
 
 // Job documents sub-routes
 router.use('/:jobId/documents', jobDocumentRoutes);
@@ -72,11 +72,11 @@ router.patch('/:id/start', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPL
 router.patch('/:id/pause', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), pauseJob);
 router.patch('/:id/resume', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), resumeJob);
 router.patch('/:id/done', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), markJobDone);
-router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'DAF'), approveJob);
-router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'DAF'), rejectJobValidation, validate, rejectJob);
+router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), approveJob);
+router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), rejectJobValidation, validate, rejectJob);
 router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, assignJob);
 router.patch('/:id/reassign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, reassignJob);
 router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), deliverJob);
-router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), completeJob);
+router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER', 'HOBE'), completeJob);
 
 module.exports = router;

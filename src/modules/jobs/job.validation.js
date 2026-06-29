@@ -26,7 +26,11 @@ const JOB_STATES = [
 
 const createJobValidation = [
   body('title').trim().notEmpty().withMessage('Job title is required'),
-  body('customerId').notEmpty().withMessage('Customer ID is required').isUUID().withMessage('Customer ID must be a valid UUID'),
+  body('customerId').optional().isUUID().withMessage('Customer ID must be a valid UUID'),
+  body('jobFor').optional().isIn(['hobe', 'general']).withMessage('jobFor must be one of: hobe, general'),
+  body('owner.fullName').if(body('jobFor').equals('hobe')).notEmpty().withMessage('owner.fullName is required for hobe jobs'),
+  body('owner.phone').if(body('jobFor').equals('hobe')).notEmpty().withMessage('owner.phone is required for hobe jobs'),
+  body('owner.email').optional().isEmail().withMessage('owner.email must be a valid email'),
   body('description').optional().trim(),
   body('jobType').optional().trim(),
   body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
@@ -46,6 +50,7 @@ const updateJobValidation = [
   body('title').optional().trim().notEmpty().withMessage('Title cannot be empty'),
   body('description').optional().trim(),
   body('jobType').optional().trim(),
+  body('jobFor').optional().isIn(['hobe', 'general']).withMessage('jobFor must be one of: hobe, general'),
   body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
   body('size').optional().trim(),
   body('colorMode').optional().trim(),

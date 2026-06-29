@@ -7,11 +7,11 @@ const { authorize } = require('../middlewares/role.middleware');
 
 router.use(authenticate);
 
-const allowed = ['ADMIN', 'DAF', 'ACCOUNTANT', 'RECEPTIONIST'];
+const allowed = ['ADMIN', 'DAF', 'HR', 'ACCOUNTANT', 'RECEPTIONIST'];
 
 router.get('/debts', authorize(...allowed), getDebtList);
 router.get('/records', authorize(...allowed), getRecoveryRecords);
 router.post('/', authorize(...allowed), createRecoveryRecord);
-router.patch('/:id/status', authorize('ADMIN', 'DAF', 'ACCOUNTANT'), updateRecoveryStatus);
+router.patch('/:id/status', authorize('ADMIN', 'DAF', 'HR', 'ACCOUNTANT'), updateRecoveryStatus);
 
 module.exports = router;

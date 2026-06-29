@@ -110,12 +110,14 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
 
   const createEntry = async (req, res, next) => {
     try {
-      const { stockItemId, quantityIn, unitCost, supplier, referenceNo, notes, entryDate } = req.body;
+      const { stockItemId, quantityIn, quantity, unitCost, supplier, referenceNo, notes, entryDate } = req.body;
+      const resolvedQty = quantityIn ?? quantity;
       const item = await Item.findByPk(stockItemId);
       if (!item) return error(res, 'Stock item not found.', 404);
 
       const stockBefore = parseFloat(item.currentStock);
-      const qty = parseFloat(quantityIn);
+      const qty = parseFloat(resolvedQty);
+      if (isNaN(qty)) return error(res, 'Quantity is required and must be a valid number.', 400);
       const stockAfter = stockBefore + qty;
       const totalCost = unitCost ? qty * parseFloat(unitCost) : null;
 

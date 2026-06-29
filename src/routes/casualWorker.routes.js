@@ -20,6 +20,6 @@ router.get('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), getAllCasualWorke
 router.get('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), getCasualWorkerById);
 router.post('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), createCasualWorkerValidation, validate, createCasualWorker);
 router.put('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), updateCasualWorkerValidation, validate, updateCasualWorker);
-router.delete('/:id', authorize('ADMIN', 'DAF'), deleteCasualWorker);
+router.delete('/:id', authorize('ADMIN', 'DAF', 'HR'), deleteCasualWorker);
 
 module.exports = router;

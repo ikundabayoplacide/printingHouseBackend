@@ -156,13 +156,38 @@ const getJobDetails = async (req, res, next) => {
 const createJob = async (req, res, next) => {
   try {
     const {
-      title, description, jobType, quantity, size,
+      title, description, jobType, jobFor, quantity, size,
       colorMode, bindingType, priority, dueDate, notes,
-      customerId, amount, items,
+      customerId, amount, items, owner,
     } = req.body;
 
-    const customer = await Customer.findOne({ where: { id: customerId, isActive: true } });
-    if (!customer) return error(res, 'Customer not found or inactive.', 404);
+    let customer;
+
+    if (jobFor === 'hobe') {
+      if (!owner || !owner.fullName || !owner.phone) {
+        return error(res, 'owner.fullName and owner.phone are required for hobe jobs.', 400);
+      }
+      // find-or-create the customer by phone
+      const [hobeCustomer] = await Customer.findOrCreate({
+        where: { phone: owner.phone },
+        defaults: {
+          name: owner.fullName,
+          phone: owner.phone,
+          email: owner.email || null,
+          type: 'HOBE',
+          company: null,
+          tin: null,
+          address: null,
+          notes: null,
+          isActive: true,
+        },
+      });
+      customer = hobeCustomer;
+    } else {
+      if (!customerId) return error(res, 'customerId is required.', 400);
+      customer = await Customer.findOne({ where: { id: customerId, isActive: true } });
+      if (!customer) return error(res, 'Customer not found or inactive.', 404);
+    }
 
     // Validate items if provided
     if (items && items.length > 0) {
@@ -179,9 +204,9 @@ const createJob = async (req, res, next) => {
     const jobNumber = await Job.generateJobNumber();
 
     const job = await Job.create({
-      jobNumber, title, description, jobType, quantity, size,
+      jobNumber, title, description, jobType, jobFor: jobFor || null, quantity, size,
       colorMode, bindingType, priority: priority || 'normal',
-      dueDate, notes, customerId, amount,
+      dueDate, notes, customerId: customer.id, amount,
       createdById: req.user.id,
     });
 
@@ -274,7 +299,7 @@ const updateJob = async (req, res, next) => {
     if (!job) return error(res, 'Job not found.', 404);
 
     const {
-      title, description, jobType, quantity, size,
+      title, description, jobType, jobFor, quantity, size,
       colorMode, bindingType, priority, dueDate, notes,
       departmentAssignedToId, amount,
     } = req.body;
@@ -288,6 +313,7 @@ const updateJob = async (req, res, next) => {
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
       ...(jobType !== undefined && { jobType }),
+      ...(jobFor !== undefined && { jobFor }),
       ...(quantity !== undefined && { quantity }),
       ...(size !== undefined && { size }),
       ...(colorMode !== undefined && { colorMode }),
@@ -510,6 +536,11 @@ const completeJob = async (req, res, next) => {
 
     if (job.status === 'delivered') {
       return error(res, 'Job is already delivered and cannot be changed.', 422);
+    }
+
+    // HOBE users can only complete hobe jobs
+    if (req.user.role === 'HOBE' && job.jobFor !== 'hobe') {
+      return error(res, 'You can only complete hobe jobs.', 403);
     }
 
     await job.update({ status: 'completed' });

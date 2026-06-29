@@ -12,6 +12,6 @@ router.use(authenticate);
 router.get('/', getAllPayments);
 router.get('/job/:jobId', getPaymentsByJob);
 router.get('/:id', getPaymentById);
-router.post('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'RECEPTIONIST', 'SALES'), createPaymentValidation, validate, createPayment);
+router.post('/', authorize('ADMIN', 'DAF', 'HR', 'ACCOUNTANT', 'RECEPTIONIST', 'SALES', 'HOBE'), createPaymentValidation, validate, createPayment);
 
 module.exports = router;

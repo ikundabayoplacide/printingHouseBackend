@@ -102,4 +102,29 @@ const getAssignmentsByEmployee = async (req, res, next) => {
   }
 };
 
-module.exports = { assignMachine, unassignMachine, getAssignmentsByMachine, getAssignmentsByEmployee };
+/**
+ * PUT /api/machine-assignments/:id/reassign
+ * Reassign a machine from current employee to a new one.
+ * Body: { newEmployeeId }
+ */
+const reassignMachine = async (req, res, next) => {
+  try {
+    const assignment = await MachineAssignment.findByPk(req.params.id);
+    if (!assignment) return error(res, 'Assignment not found.', 404);
+
+    const { newEmployeeId } = req.body;
+    const employee = await Employee.findOne({ where: { id: newEmployeeId, isActive: true } });
+    if (!employee) return error(res, 'Employee not found or inactive.', 404);
+
+    if (assignment.employeeId === newEmployeeId) return error(res, 'Machine is already assigned to this employee.', 409);
+
+    await assignment.update({ employeeId: newEmployeeId, assignedById: req.user.id, assignedAt: new Date() });
+
+    const updated = await MachineAssignment.findByPk(assignment.id, { include: assignmentIncludes });
+    return success(res, updated, 'Machine reassigned successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { assignMachine, unassignMachine, reassignMachine, getAssignmentsByMachine, getAssignmentsByEmployee };

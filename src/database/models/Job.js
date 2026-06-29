@@ -53,6 +53,11 @@ Job.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    jobFor: {
+      type: DataTypes.ENUM('hobe', 'general'),
+      allowNull: true,
+      defaultValue: null,
+    },
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: true,

@@ -31,8 +31,8 @@ const createPayment = async (req, res, next) => {
     // Validate receivedById is a RECEPTIONIST or ADMIN
     const receiver = await User.findOne({ where: { id: receivedById, isActive: true } });
     if (!receiver) return error(res, 'Received by user not found.', 404);
-    if (!['RECEPTIONIST', 'ADMIN', 'ACCOUNTANT'].includes(receiver.role)) {
-      return error(res, 'receivedById must be a RECEPTIONIST, ACCOUNTANT, or ADMIN.', 400);
+    if (!['RECEPTIONIST', 'ADMIN', 'ACCOUNTANT', 'HOBE'].includes(receiver.role)) {
+      return error(res, 'receivedById must be a RECEPTIONIST, ACCOUNTANT, HOBE, or ADMIN.', 400);
     }
 
     // Validate verifiedById is an ACCOUNTANT or ADMIN if provided

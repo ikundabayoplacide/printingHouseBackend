@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   assignMachine,
   unassignMachine,
+  reassignMachine,
   getAssignmentsByMachine,
   getAssignmentsByEmployee,
 } = require('../controllers/machineAssignment.controller');
@@ -13,6 +14,7 @@ router.use(authenticate);
 
 router.post('/', authorize('ADMIN', 'SUPERVISOR'), assignMachine);
 router.delete('/:id', authorize('ADMIN', 'SUPERVISOR'), unassignMachine);
+router.put('/:id/reassign', authorize('ADMIN', 'SUPERVISOR'), reassignMachine);
 router.get('/machine/:machineId', getAssignmentsByMachine);
 router.get('/employee/:employeeId', getAssignmentsByEmployee);
 

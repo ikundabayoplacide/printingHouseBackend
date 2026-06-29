@@ -24,6 +24,6 @@ router.post('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), createPayrollVal
 router.put('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), updatePayrollValidation, validate, updatePayroll);
 router.patch('/:id/approve', authorize('ADMIN', 'DAF', 'HR'), approvePayroll);
 router.patch('/:id/pay', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), markPayrollPaid);
-router.delete('/:id', authorize('ADMIN', 'DAF'), deletePayroll);
+router.delete('/:id', authorize('ADMIN', 'DAF', 'HR'), deletePayroll);
 
 module.exports = router;
