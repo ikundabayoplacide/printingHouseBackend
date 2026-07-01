@@ -16,8 +16,8 @@ const { authorize } = require('../middlewares/role.middleware');
 
 router.use(authenticate);
 
-router.get('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), getAllCasualWorkers);
-router.get('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), getCasualWorkerById);
+router.get('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR', 'CASHIER'), getAllCasualWorkers);
+router.get('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR', 'CASHIER'), getCasualWorkerById);
 router.post('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), createCasualWorkerValidation, validate, createCasualWorker);
 router.put('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), updateCasualWorkerValidation, validate, updateCasualWorker);
 router.delete('/:id', authorize('ADMIN', 'DAF', 'HR'), deleteCasualWorker);

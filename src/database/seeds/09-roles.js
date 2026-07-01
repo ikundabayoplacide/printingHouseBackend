@@ -16,6 +16,7 @@ module.exports = {
       { id: uuidv4(), name: 'SUPERVISOR', description: 'Oversees a specific department\'s workers and production quality.', isActive: true, isSystem: true, createdAt: new Date(), updatedAt: new Date() },
       { id: uuidv4(), name: 'WORKER', description: 'Lowest privilege. Only sees and manages their own work.', isActive: true, isSystem: true, createdAt: new Date(), updatedAt: new Date() },
       { id: uuidv4(), name: 'HOBE', description: 'Manages hobe production batches and trades.', isActive: true, isSystem: true, createdAt: new Date(), updatedAt: new Date() },
+      { id: uuidv4(), name: 'CASHIER', description: 'Handles cash transactions, payments, and receipts.', isActive: true, isSystem: true, createdAt: new Date(), updatedAt: new Date() },
     ]);
   },
 
@@ -24,7 +25,7 @@ module.exports = {
       name: {
         [require('sequelize').Op.in]: [
           'ADMIN', 'RECEPTIONIST', 'SALES', 'DAF', 'ACCOUNTANT',
-          'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER',
+          'PRODUCTION_MANAGER', 'STOCK', 'SUPERVISOR', 'WORKER', 'CASHIER',
         ],
       },
     });
