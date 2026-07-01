@@ -64,7 +64,10 @@ const getLeaveById = async (req, res, next) => {
  */
 const createLeave = async (req, res, next) => {
   try {
-    const { type, startDate, endDate, reason, documentUrl } = req.body;
+    const { type, startDate, endDate, reason } = req.body;
+    const documentUrl = req.file
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+      : req.body.documentUrl || null;
 
     if (new Date(endDate) < new Date(startDate))
       return error(res, 'End date cannot be before start date.', 422);
@@ -99,6 +102,7 @@ const reviewLeave = async (req, res, next) => {
     const leave = await LeaveRequest.findByPk(req.params.id);
     if (!leave) return error(res, 'Leave request not found.', 404);
     if (leave.status !== 'PENDING') return error(res, `Leave is already ${leave.status}.`, 409);
+    if (leave.userId === req.user.id) return error(res, 'You cannot review your own leave request.', 403);
 
     const { action, rejectionReason } = req.body;
     if (!['approve', 'reject'].includes(action))
@@ -164,4 +168,38 @@ const uploadDocument = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getMyLeaves, getAllLeaves, getLeaveById, createLeave, reviewLeave, cancelLeave, uploadDocument };
+/**
+ * PUT /api/leaves/:id
+ * Owner can edit their own PENDING leave request.
+ */
+const updateLeave = async (req, res, next) => {
+  try {
+    const leave = await LeaveRequest.findByPk(req.params.id);
+    if (!leave) return error(res, 'Leave request not found.', 404);
+    if (leave.userId !== req.user.id) return error(res, 'Forbidden.', 403);
+    if (leave.status !== 'PENDING') return error(res, 'Only pending leave requests can be edited.', 409);
+
+    const { type, startDate, endDate, reason } = req.body;
+    const documentUrl = req.file
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+      : req.body.documentUrl !== undefined ? req.body.documentUrl : undefined;
+
+    const newStart = startDate || leave.startDate;
+    const newEnd = endDate || leave.endDate;
+    if (new Date(newEnd) < new Date(newStart))
+      return error(res, 'End date cannot be before start date.', 422);
+
+    await leave.update({
+      ...(type !== undefined && { type }),
+      ...(startDate !== undefined && { startDate }),
+      ...(endDate !== undefined && { endDate }),
+      ...(reason !== undefined && { reason }),
+      ...(documentUrl !== undefined && { documentUrl }),
+    });
+
+    const updated = await LeaveRequest.findByPk(leave.id, { include: leaveIncludes });
+    return success(res, updated, 'Leave request updated successfully.');
+  } catch (err) { next(err); }
+};
+
+module.exports = { getMyLeaves, getAllLeaves, getLeaveById, createLeave, updateLeave, reviewLeave, cancelLeave, uploadDocument };

@@ -8,6 +8,10 @@ const JobItem = require('../database/models/JobItem');
 const StockItem = require('../database/models/StockItem');
 const Proforma = require('../database/models/Proforma');
 const JobDocument = require('../database/models/JobDocument');
+const Invoice = require('../database/models/Invoice');
+const StockSortie = require('../database/models/StockSortie');
+const RecoveryRecord = require('../database/models/RecoveryRecord');
+const MaterialRequest = require('../database/models/MaterialRequest');
 const Employee = require('../database/models/Employee');
 const EmployeeJobAssignment = require('../database/models/EmployeeJobAssignment');
 const { success, error, paginated } = require('../utils/apiResponse');
@@ -192,11 +196,13 @@ const createJob = async (req, res, next) => {
     // Validate items if provided
     if (items && items.length > 0) {
       for (const item of items) {
-        const stockItem = await StockItem.findByPk(item.stockItemId);
-        if (!stockItem) return error(res, `Stock item ${item.stockItemId} not found.`, 404);
-        if (!stockItem.isActive) return error(res, `Stock item "${stockItem.itemName}" is inactive.`, 422);
-        if (parseFloat(item.quantityNeeded) > parseFloat(stockItem.currentStock)) {
-          return error(res, `Insufficient stock for "${stockItem.itemName}". Available: ${stockItem.currentStock} ${stockItem.unit || ''}, requested: ${item.quantityNeeded}.`, 422);
+        if (item.stockItemId) {
+          const stockItem = await StockItem.findByPk(item.stockItemId);
+          if (!stockItem) return error(res, `Stock item ${item.stockItemId} not found.`, 404);
+          if (!stockItem.isActive) return error(res, `Stock item "${stockItem.itemName}" is inactive.`, 422);
+          if (parseFloat(item.quantityNeeded) > parseFloat(stockItem.currentStock)) {
+            return error(res, `Insufficient stock for "${stockItem.itemName}". Available: ${stockItem.currentStock} ${stockItem.unit || ''}, requested: ${item.quantityNeeded}.`, 422);
+          }
         }
       }
     }
@@ -216,9 +222,13 @@ const createJob = async (req, res, next) => {
         items.map((item) =>
           JobItem.create({
             jobId: job.id,
-            stockItemId: item.stockItemId,
+            stockItemId: item.stockItemId ?? null,
+            itemName: item.itemName ?? item.customName ?? null,
+            unit: item.unit ?? null,
+            unitCost: item.unitCost ?? null,
+            totalCost: item.unitCost && item.quantityNeeded ? parseFloat(item.unitCost) * parseFloat(item.quantityNeeded) : null,
             quantityNeeded: item.quantityNeeded,
-            notes: item.notes || null,
+            notes: item.notes ?? null,
           })
         )
       );
@@ -534,8 +544,8 @@ const completeJob = async (req, res, next) => {
       return error(res, 'Job is already completed.', 409);
     }
 
-    if (job.status === 'delivered') {
-      return error(res, 'Job is already delivered and cannot be changed.', 422);
+    if (['delivered', 'partial-delivered'].includes(job.status)) {
+      return error(res, `Job is already ${job.status} and cannot be changed.`, 422);
     }
 
     // HOBE users can only complete hobe jobs
@@ -599,7 +609,11 @@ const getCompletedAndPaidJobs = async (req, res, next) => {
 
 /**
  * PATCH /api/jobs/:id/deliver
- * Mark a job as delivered. Only allowed if current status is 'ready-for-delivery'.
+ * Receptionist marks a quantity as delivered.
+ * - Supports partial delivery: each call sends a quantityDelivered chunk.
+ * - Tracks cumulative quantityDelivered on the job.
+ * - When quantityDelivered reaches total quantity, status becomes 'delivered'.
+ * - Otherwise status stays 'completed' with partial delivery recorded.
  */
 const deliverJob = async (req, res, next) => {
   try {
@@ -607,25 +621,55 @@ const deliverJob = async (req, res, next) => {
     if (!job) return error(res, 'Job not found.', 404);
 
     if (job.status === 'delivered') {
-      return error(res, 'Job is already marked as delivered.', 409);
+      return error(res, 'Job is already fully delivered.', 409);
     }
 
-    if (job.status !== 'completed') {
-      return error(res, `Job cannot be delivered from status '${job.status}'. It must be 'completed' first.`, 422);
+    if (!['completed', 'partial-delivered'].includes(job.status)) {
+      return error(res, `Job cannot be delivered from status '${job.status}'. It must be 'completed' or 'partial-delivered' first.`, 422);
     }
 
-    const { deliveredByName, deliveredByContact } = req.body;
+    const { quantityDelivered, deliveredByName, deliveredByContact } = req.body;
+
+    // quantityDelivered is required
+    if (quantityDelivered === undefined || quantityDelivered === null || quantityDelivered === '') {
+      return error(res, 'quantityDelivered is required.', 400);
+    }
+
+    const qty = parseInt(quantityDelivered, 10);
+    if (isNaN(qty) || qty <= 0) {
+      return error(res, 'quantityDelivered must be a positive integer.', 400);
+    }
+
+    const totalQuantity = job.quantity || 0;
+    const alreadyDelivered = parseInt(job.quantityDelivered, 10) || 0;
+    const remaining = totalQuantity - alreadyDelivered;
+
+    if (qty > remaining) {
+      return error(
+        res,
+        `Cannot deliver ${qty}. Only ${remaining} remaining out of ${totalQuantity} total.`,
+        422
+      );
+    }
+
+    const newQuantityDelivered = alreadyDelivered + qty;
+    const newRemaining = totalQuantity - newQuantityDelivered;
+    const fullyDelivered = newRemaining === 0;
+    const newStatus = fullyDelivered ? 'delivered' : 'partial-delivered';
 
     await job.update({
-      status: 'delivered',
+      quantityDelivered: newQuantityDelivered,
+      status: newStatus,
       ...(deliveredByName !== undefined && { deliveredByName }),
       ...(deliveredByContact !== undefined && { deliveredByContact }),
     });
 
     await notify({
       createdById: req.user.id,
-      title: 'Job Delivered',
-      message: `Job ${job.jobNumber} ("${job.title}") has been marked as delivered.`,
+      title: fullyDelivered ? 'Job Fully Delivered' : 'Partial Delivery Recorded',
+      message: fullyDelivered
+        ? `Job ${job.jobNumber} ("${job.title}") has been fully delivered. All ${totalQuantity} units delivered.`
+        : `Job ${job.jobNumber} ("${job.title}"): ${qty} units delivered. ${newRemaining} unit(s) remaining.`,
       type: 'JOB_DELIVERED',
       relatedEntityType: 'job',
       relatedEntityId: job.id,
@@ -635,8 +679,12 @@ const deliverJob = async (req, res, next) => {
     return success(res, {
       id: job.id,
       jobNumber: job.jobNumber,
-      status: 'delivered',
-    }, 'Job marked as delivered.');
+      status: job.status,
+      totalQuantity,
+      quantityDelivered: newQuantityDelivered,
+      quantityRemaining: newRemaining,
+      fullyDelivered,
+    }, fullyDelivered ? 'Job fully delivered.' : `Delivery recorded. ${newRemaining} unit(s) still remaining.`);
   } catch (err) {
     next(err);
   }
@@ -655,7 +703,7 @@ const rejectJob = async (req, res, next) => {
     const job = await Job.findByPk(req.params.id, { include: jobIncludes });
     if (!job) return error(res, 'Job not found.', 404);
 
-    if (!['pending', 'confirmed'].includes(job.status)) {
+    if (!['pending', 'confirmed', 'verified'].includes(job.status)) {
       return error(res, `Job cannot be rejected. Current status is '${job.status}'.`, 422);
     }
 
@@ -690,8 +738,8 @@ const approveJob = async (req, res, next) => {
     const job = await Job.findByPk(req.params.id, { include: jobIncludes });
     if (!job) return error(res, 'Job not found.', 404);
 
-    if (job.status !== 'pending') {
-      return error(res, `Job cannot be accepted. Current status is '${job.status}', expected 'pending'.`, 422);
+    if (!['pending', 'verified'].includes(job.status)) {
+      return error(res, `Job cannot be accepted. Current status is '${job.status}'.`, 422);
     }
 
     await job.update({ status: 'confirmed' });
@@ -757,6 +805,16 @@ const deleteJob = async (req, res, next) => {
     if (!['pending', 'confirmed'].includes(job.status)) {
       return error(res, 'Only pending or confirmed jobs can be deleted.', 422);
     }
+
+    const jobId = job.id;
+    await Payment.destroy({ where: { jobId } });
+    await JobItem.destroy({ where: { jobId } });
+    await Proforma.destroy({ where: { jobId } });
+    await Invoice.destroy({ where: { jobId } });
+    await JobDocument.destroy({ where: { jobId } });
+    await StockSortie.destroy({ where: { jobId } });
+    await RecoveryRecord.destroy({ where: { jobId } });
+    await MaterialRequest.destroy({ where: { jobId } });
 
     await job.destroy();
     return success(res, null, 'Job deleted successfully.');
@@ -865,6 +923,38 @@ const markJobDone = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+/**
+ * PATCH /api/jobs/:id/verify
+ * ADMIN or DAF marks a completed job as verified.
+ */
+const verifyJob = async (req, res, next) => {
+  try {
+    const job = await Job.findByPk(req.params.id);
+    if (!job) return error(res, 'Job not found.', 404);
+
+    if (job.status === 'verified') {
+      return error(res, 'Job is already verified.', 409);
+    }
+
+    await job.update({ status: 'verified' });
+
+    await notify({
+      createdById: req.user.id,
+      title: 'Job Verified',
+      message: `Job ${job.jobNumber} has been verified by ${req.user.name || req.user.role}.`,
+      type: 'JOB_DAF_ACTION',
+      relatedEntityType: 'job',
+      relatedEntityId: job.id,
+      targetRoles: ['ADMIN', 'PRODUCTION_MANAGER'],
+      targetUserIds: [job.createdById],
+    });
+
+    return success(res, { id: job.id, jobNumber: job.jobNumber, status: 'verified' }, 'Job verified successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getNextJobNumber,
   getJobByNumber,
@@ -889,4 +979,5 @@ module.exports = {
   getCompletedAndPaidJobs,
   deleteJob,
   getJobsByDepartment,
+  verifyJob,
 };

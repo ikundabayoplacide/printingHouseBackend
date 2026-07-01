@@ -24,6 +24,7 @@ const {
   deliverJob,
   getCompletedAndPaidJobs,
   deleteJob,
+  verifyJob,
 } = require('../controllers/job.controller');
 
 const {
@@ -33,6 +34,7 @@ const {
   updateJobStateValidation,
   assignJobValidation,
   rejectJobValidation,
+  deliverJobValidation,
 } = require('../modules/jobs/job.validation');
 
 const { validate } = require('../middlewares/validate.middleware');
@@ -53,7 +55,23 @@ router.get('/number/:jobNumber', getJobByNumber);
 // List & create
 router.get('/completed-and-paid', getCompletedAndPaidJobs);
 router.get('/', getAllJobs);
-router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'HOBE'), upload.array('documents', 10), createJobValidation, validate, createJob);
+router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'HOBE'), upload.array('documents', 10), (req, _res, next) => {
+  if (req.body.items) {
+    try {
+      const raw = typeof req.body.items === 'string' ? JSON.parse(req.body.items) : req.body.items;
+      const arr = Array.isArray(raw) ? raw : Object.values(raw);
+      console.log('RAW ITEMS FROM MULTIPART:', JSON.stringify(arr, null, 2));
+      req.body.items = arr.map((item) => {
+        const parsed = typeof item === 'string' ? JSON.parse(item) : item;
+        return Object.fromEntries(
+          Object.entries(parsed).filter(([, v]) => v !== 'undefined' && v !== undefined && v !== null && v !== '')
+        );
+      });
+      console.log('SANITIZED ITEMS:', JSON.stringify(req.body.items, null, 2));
+    } catch { /* leave as-is */ }
+  }
+  next();
+}, createJobValidation, validate, createJob);
 
 // Job documents sub-routes
 router.use('/:jobId/documents', jobDocumentRoutes);
@@ -62,7 +80,7 @@ router.use('/:jobId/documents', jobDocumentRoutes);
 router.get('/:id/details', getJobDetails);
 router.get('/:id', getJobById);
 router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRODUCTION_MANAGER'), updateJobValidation, validate, updateJob);
-router.delete('/:id', authorize('ADMIN'), deleteJob);
+router.delete('/:id', authorize('ADMIN', 'SALES'), deleteJob);
 
 // Workflow actions
 router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'SALES', 'PRINTEMPLOYEE', 'SUPERVISOR'), updateJobStatusValidation, validate, updateJobStatus);
@@ -76,7 +94,8 @@ router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), appro
 router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), rejectJobValidation, validate, rejectJob);
 router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, assignJob);
 router.patch('/:id/reassign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, reassignJob);
-router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), deliverJob);
+router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), deliverJobValidation, validate, deliverJob);
 router.patch('/:id/complete', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER', 'HOBE'), completeJob);
+router.patch('/:id/verify', authorize('ADMIN', 'DAF'), verifyJob);
 
 module.exports = router;

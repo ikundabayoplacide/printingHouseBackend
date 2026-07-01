@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const Department = require('../database/models/Department');
 const Employee = require('../database/models/Employee');
+const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 
@@ -46,7 +47,10 @@ const getAllDepartments = async (req, res, next) => {
 const getDepartmentById = async (req, res, next) => {
   try {
     const department = await Department.findByPk(req.params.id, {
-      include: [{ model: Employee, as: 'employees', attributes: ['id', 'fullName', 'phoneNumber', 'contractType', 'isActive'] }],
+      include: [
+        { model: Employee, as: 'employees', attributes: ['id', 'fullName', 'phoneNumber', 'contractType', 'isActive'] },
+        { model: User, as: 'users', attributes: ['id', 'name', 'email', 'phone', 'role', 'isActive'] },
+      ],
     });
     if (!department) return error(res, 'Department not found.', 404);
 

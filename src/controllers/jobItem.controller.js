@@ -37,24 +37,30 @@ const addJobItem = async (req, res, next) => {
     const job = await Job.findByPk(req.params.jobId);
     if (!job) return error(res, 'Job not found.', 404);
 
-    const { stockItemId, quantityNeeded, notes } = req.body;
+    const { stockItemId, itemName, unit, unitCost, quantityNeeded, notes } = req.body;
 
-    const stockItem = await StockItem.findByPk(stockItemId);
-    if (!stockItem) return error(res, 'Stock item not found.', 404);
-    if (!stockItem.isActive) return error(res, `Stock item "${stockItem.itemName}" is inactive.`, 422);
+    if (!stockItemId && !itemName) return error(res, 'Either stockItemId or itemName is required.', 400);
 
-    // Check if already added
-    const existing = await JobItem.findOne({ where: { jobId: req.params.jobId, stockItemId } });
-    if (existing) return error(res, 'This stock item is already added to the job. Update it instead.', 409);
+    if (stockItemId) {
+      const stockItem = await StockItem.findByPk(stockItemId);
+      if (!stockItem) return error(res, 'Stock item not found.', 404);
+      if (!stockItem.isActive) return error(res, `Stock item "${stockItem.itemName}" is inactive.`, 422);
 
-    // Warn if quantity needed exceeds current stock
-    if (parseFloat(quantityNeeded) > parseFloat(stockItem.currentStock)) {
-      return error(res, `Insufficient stock for "${stockItem.itemName}". Available: ${stockItem.currentStock} ${stockItem.unit || ''}, requested: ${quantityNeeded}.`, 422);
+      const existing = await JobItem.findOne({ where: { jobId: req.params.jobId, stockItemId } });
+      if (existing) return error(res, 'This stock item is already added to the job. Update it instead.', 409);
+
+      if (parseFloat(quantityNeeded) > parseFloat(stockItem.currentStock)) {
+        return error(res, `Insufficient stock for "${stockItem.itemName}". Available: ${stockItem.currentStock} ${stockItem.unit || ''}, requested: ${quantityNeeded}.`, 422);
+      }
     }
 
     const jobItem = await JobItem.create({
       jobId: req.params.jobId,
-      stockItemId,
+      stockItemId: stockItemId || null,
+      itemName: itemName || null,
+      unit: unit || null,
+      unitCost: unitCost || null,
+      totalCost: unitCost && quantityNeeded ? parseFloat(unitCost) * parseFloat(quantityNeeded) : null,
       quantityNeeded,
       notes: notes || null,
     });
@@ -77,12 +83,20 @@ const updateJobItem = async (req, res, next) => {
     });
     if (!jobItem) return error(res, 'Job item not found.', 404);
 
-    const { quantityNeeded, quantityUsed, notes } = req.body;
+    const { quantityNeeded, quantityUsed, unitCost, itemName, unit, notes } = req.body;
+
+    const updatedUnitCost = unitCost !== undefined ? unitCost : jobItem.unitCost;
+    const updatedQty = quantityNeeded !== undefined ? quantityNeeded : jobItem.quantityNeeded;
+    const totalCost = updatedUnitCost && updatedQty ? parseFloat(updatedUnitCost) * parseFloat(updatedQty) : null;
 
     await jobItem.update({
+      ...(itemName !== undefined && { itemName }),
+      ...(unit !== undefined && { unit }),
       ...(quantityNeeded !== undefined && { quantityNeeded }),
       ...(quantityUsed !== undefined && { quantityUsed }),
+      ...(unitCost !== undefined && { unitCost }),
       ...(notes !== undefined && { notes }),
+      totalCost,
     });
 
     const updated = await JobItem.findByPk(jobItem.id, { include: jobItemIncludes });

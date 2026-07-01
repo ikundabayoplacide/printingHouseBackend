@@ -59,11 +59,11 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
 
   const createItem = async (req, res, next) => {
     try {
-      const { itemName, category, unit, description, supplier, unitCost, currentStock, alarmStock } = req.body;
+      const { itemName, category, unit, description, supplier, unitCost, amountPerUnit, currentStock, alarmStock } = req.body;
       if (currentStock === undefined || currentStock === null || currentStock === '') return error(res, 'Initial stock is required.', 400);
       const parsedStock = parseFloat(currentStock);
       if (isNaN(parsedStock)) return error(res, 'Initial stock must be a valid number.', 400);
-      const item = await Item.create({ itemName, category, unit: unit || null, description, supplier, unitCost, currentStock: parsedStock, alarmStock: alarmStock || 5 });
+      const item = await Item.create({ itemName, category, unit: unit || null, description, supplier, unitCost, amountPerUnit: amountPerUnit || null, currentStock: parsedStock, alarmStock: alarmStock || 5 });
       return success(res, { ...item.toJSON(), stockStatus: item.stockStatus }, 'Stock item created successfully.', 201);
     } catch (err) { next(err); }
   };
@@ -72,7 +72,7 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
     try {
       const item = await Item.findByPk(req.params.id);
       if (!item) return error(res, 'Stock item not found.', 404);
-      const { itemName, category, unit, description, supplier, unitCost, alarmStock, isActive } = req.body;
+      const { itemName, category, unit, description, supplier, unitCost, amountPerUnit, alarmStock, isActive } = req.body;
       await item.update({
         ...(itemName !== undefined && { itemName }),
         ...(category !== undefined && { category }),
@@ -80,6 +80,7 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
         ...(description !== undefined && { description }),
         ...(supplier !== undefined && { supplier }),
         ...(unitCost !== undefined && { unitCost }),
+        ...(amountPerUnit !== undefined && { amountPerUnit }),
         ...(alarmStock !== undefined && { alarmStock }),
         ...(isActive !== undefined && { isActive }),
       });
@@ -229,8 +230,19 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
         });
       }
 
-      const updated = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
-      return success(res, updated, 'Stock sortie approved successfully.');
+      const [updated, updatedItem] = await Promise.all([
+        Sortie.findByPk(sortie.id, { include: sortieIncludes }),
+        Item.findByPk(item.id),
+      ]);
+      const data = {
+        ...updated.toJSON(),
+        stockItem: {
+          ...updated.toJSON().stockItem,
+          currentStock: parseFloat(updatedItem.currentStock),
+          stockStatus: updatedItem.stockStatus,
+        },
+      };
+      return success(res, data, 'Stock sortie approved successfully.');
     } catch (err) { next(err); }
   };
 

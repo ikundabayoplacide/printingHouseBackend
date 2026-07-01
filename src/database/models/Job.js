@@ -83,8 +83,10 @@ Job.init(
         'confirmed',
         'rejected',
         'ready-for-delivery',
+        'partial-delivered',
         'delivered',
-        'completed'
+        'completed',
+        'verified'
       ),
       defaultValue: 'pending',
       allowNull: false,
@@ -175,6 +177,12 @@ Job.init(
       defaultValue: 'unpaid',
       allowNull: false,
     },
+    quantityDelivered: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Cumulative quantity already delivered to the customer',
+    },
     deliveredByName: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -211,8 +219,10 @@ Job.validTransitions = {
   pending: ['confirmed', 'rejected'],
   confirmed: ['ready-for-delivery', 'rejected'],
   'ready-for-delivery': ['delivered'],
+  'partial-delivered': ['delivered'],
   delivered: ['completed'],
   completed: [],
+  verified: [],
 };
 
 // Valid state transitions (supervisor marks department work as done)

@@ -265,17 +265,21 @@ const markAsSold = async (req, res, next) => {
 const getSalesAudit = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const { productId, soldById, customerId, from, to, paymentStatus } = req.query;
+    const { productId, customerId, from, to, paymentStatus } = req.query;
 
     const where = {};
     if (productId) where.productId = productId;
-    if (soldById) where.soldById = soldById;
     if (customerId) where.customerId = customerId;
     if (paymentStatus) where.paymentStatus = paymentStatus;
     if (from || to) {
       where.createdAt = {};
       if (from) where.createdAt[Op.gte] = new Date(from);
       if (to) where.createdAt[Op.lte] = new Date(to);
+    }
+
+    // Receptionist sees only their own records
+    if (req.user.role === 'RECEPTIONIST') {
+      where.soldById = req.user.id;
     }
 
     const { count, rows } = await BoutiqueSale.findAndCountAll({

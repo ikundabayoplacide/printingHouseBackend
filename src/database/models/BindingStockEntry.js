@@ -5,8 +5,16 @@ class BindingStockEntry extends Model {}
 
 BindingStockEntry.init(
   {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    stockItemId: { type: DataTypes.UUID, allowNull: false },
+    id: { type: DataTypes.UUID, 
+      defaultValue: DataTypes.UUIDV4, 
+      primaryKey: true 
+    },
+
+    stockItemId: 
+    { type: DataTypes.UUID,
+       allowNull: false 
+    },
+
     receivedById: { type: DataTypes.UUID, allowNull: false },
     quantityIn: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     unitCost: { type: DataTypes.DECIMAL(12, 2), allowNull: true },

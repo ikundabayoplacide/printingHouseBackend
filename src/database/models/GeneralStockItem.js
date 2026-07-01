@@ -3,9 +3,11 @@ const { sequelize } = require('../../config/database');
 
 class GeneralStockItem extends Model {
   get stockStatus() {
-    if (this.currentStock === 0) return 'out-of-stock';
-    if (this.currentStock <= this.alarmStock) return 'low-stock';
-    return 'in-stock';
+    const stock = parseFloat(this.currentStock);
+    const alarm = parseFloat(this.alarmStock);
+    if (stock <= 0) return 'out-of-stock';
+    if (stock <= alarm) return 'low';
+    return 'available';
   }
 }
 
@@ -18,6 +20,7 @@ GeneralStockItem.init(
     description: { type: DataTypes.TEXT, allowNull: true },
     supplier: { type: DataTypes.STRING(255), allowNull: true },
     unitCost: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+    amountPerUnit: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     currentStock: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     alarmStock: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 5 },
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true, allowNull: false },

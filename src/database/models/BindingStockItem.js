@@ -3,9 +3,11 @@ const { sequelize } = require('../../config/database');
 
 class BindingStockItem extends Model {
   get stockStatus() {
-    if (this.currentStock === 0) return 'out-of-stock';
-    if (this.currentStock <= this.alarmStock) return 'low-stock';
-    return 'in-stock';
+    const stock = parseFloat(this.currentStock);
+    const alarm = parseFloat(this.alarmStock);
+    if (stock <= 0) return 'out-of-stock';
+    if (stock <= alarm) return 'low';
+    return 'available';
   }
 }
 

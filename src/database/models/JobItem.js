@@ -16,7 +16,24 @@ JobItem.init(
     },
     stockItemId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
+    },
+    itemName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    unit: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    unitCost: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    totalCost: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      defaultValue: null,
     },
     quantityNeeded: {
       type: DataTypes.DECIMAL(12, 2),
