@@ -40,14 +40,17 @@ const createReport = async (req, res, next) => {
 
     const supervisorId = req.body.supervisorId || null;
 
-    const attachmentUrl = req.file ? `/uploads/reports/${req.file.filename}` : null;
+    const newFiles = req.files && req.files.length > 0
+      ? req.files.map((f) => `/uploads/reports/${f.filename}`)
+      : [];
 
     const report = await Report.create({
       title,
       purpose,
       items,
       notes: notes || null,
-      attachmentUrl,
+      attachmentUrl: newFiles[0] || null,
+      attachmentUrls: newFiles.length > 0 ? newFiles : null,
       createdById: req.user.id,
       visibleTo,
       supervisorId,
@@ -211,14 +214,34 @@ const updateReport = async (req, res, next) => {
 
     const supervisorId = req.body.supervisorId !== undefined ? (req.body.supervisorId || null) : report.supervisorId;
 
-    const attachmentUrl = req.file ? `/uploads/reports/${req.file.filename}` : report.attachmentUrl;
+    const existingUrls = Array.isArray(report.attachmentUrls) && report.attachmentUrls.length > 0
+      ? report.attachmentUrls
+      : (report.attachmentUrl ? [report.attachmentUrl] : []);
+
+    let toRemove = [];
+    if (req.body.removeAttachmentUrls) {
+      try {
+        toRemove = typeof req.body.removeAttachmentUrls === 'string'
+          ? JSON.parse(req.body.removeAttachmentUrls)
+          : req.body.removeAttachmentUrls;
+      } catch { toRemove = []; }
+    }
+
+    const newFiles = req.files && req.files.length > 0
+      ? req.files.map((f) => `/uploads/reports/${f.filename}`)
+      : [];
+
+    const mergedUrls = newFiles.length > 0 || toRemove.length > 0
+      ? [...existingUrls.filter((u) => !toRemove.includes(u)), ...newFiles]
+      : existingUrls;
 
     await report.update({
       ...(title !== undefined && { title }),
       ...(purpose !== undefined && { purpose }),
       ...(notes !== undefined && { notes }),
       items,
-      attachmentUrl,
+      attachmentUrl: mergedUrls[0] || null,
+      attachmentUrls: mergedUrls.length > 0 ? mergedUrls : null,
       visibleTo,
       supervisorId,
     });

@@ -397,6 +397,10 @@ User.hasMany(GeneralStockSortie, { foreignKey: 'requesterId', as: 'generalStockS
 GeneralStockSortie.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
 User.hasMany(GeneralStockSortie, { foreignKey: 'approvedById', as: 'approvedGeneralStockSorties' });
 
+// GeneralStockSortie → User (taken by)
+GeneralStockSortie.belongsTo(User, { foreignKey: 'takenById', as: 'takenBy' });
+User.hasMany(GeneralStockSortie, { foreignKey: 'takenById', as: 'takenGeneralStockSorties' });
+
 // BindingStockItem → BindingStockEntry
 BindingStockEntry.belongsTo(BindingStockItem, { foreignKey: 'stockItemId', as: 'stockItem' });
 BindingStockItem.hasMany(BindingStockEntry, { foreignKey: 'stockItemId', as: 'entries' });

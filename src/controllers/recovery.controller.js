@@ -30,16 +30,9 @@ const getDebtList = async (req, res, next) => {
     const { page, limit, skip } = getPagination(req.query);
     const { search, from, to, status } = req.query;
 
+    // Fetch all jobs that are NOT fully paid — let JS compute the real balance
     const where = {
-      [Op.or]: [
-        // 1. Never paid at all
-        { paymentStatus: 'unpaid' },
-        // 2. Has at least one PARTIAL payment
-        {
-          '$payments.paymentState$': 'PARTIAL',
-          '$payments.balance$': { [Op.gt]: 0 },
-        },
-      ],
+      paymentStatus: { [Op.in]: ['unpaid', 'partial'] },
     };
 
     if (status) where.status = status;
@@ -200,9 +193,11 @@ const createRecoveryRecord = async (req, res, next) => {
       paidAt: new Date(),
     });
 
-    // Mark job as paid if fully recovered
+    // Update job paymentStatus to reflect current state
     if (balanceAfter === 0) {
       await job.update({ paymentStatus: 'paid' });
+    } else {
+      await job.update({ paymentStatus: 'partial' });
     }
 
     await notify({

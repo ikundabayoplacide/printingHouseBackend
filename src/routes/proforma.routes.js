@@ -14,6 +14,6 @@ router.get('/:id', getProformaById);
 router.post('/', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), createProformaValidation, validate, createProforma);
 router.put('/:id', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), updateProformaValidation, validate, updateProforma);
 router.patch('/:id/status', authorize('ADMIN', 'RECEPTIONIST', 'SALES'), updateProformaStatusValidation, validate, updateProformaStatus);
-router.delete('/:id', authorize('ADMIN', 'RECEPTIONIST'), deleteProforma);
+router.delete('/:id', authorize('ADMIN', 'DAF'), deleteProforma);
 
 module.exports = router;

@@ -18,12 +18,14 @@ router.get('/entries', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER'),
 router.post('/entries', authorize('ADMIN', 'STOCK'), ctrl.createEntry);
 
 // Sorties (OUT)
-router.get('/sorties/my', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES'), ctrl.getMySorties);
+router.get('/sorties/my', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES', 'STOCK'), ctrl.getMySorties);
 router.get('/sorties', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER', 'SUPERVISOR'), ctrl.getAllSorties);
 router.get('/sorties/:id', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER', 'SUPERVISOR'), ctrl.getSortieById);
-router.post('/sorties', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES'), ctrl.createSortie);
+router.post('/sorties', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES', 'STOCK'), ctrl.createSortie);
+router.post('/sorties/bulk', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES', 'STOCK'), ctrl.createBulkSortie);
 router.patch('/sorties/:id', authorize('WORKER', 'SUPERVISOR'), ctrl.updateSortie);
-router.patch('/sorties/:id/approve', authorize('ADMIN', 'STOCK'), ctrl.approveSortie);
-router.patch('/sorties/:id/reject', authorize('ADMIN', 'STOCK'), ctrl.rejectSortie);
+router.patch('/sorties/:id/approve', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.approveSortie);
+router.patch('/sorties/:id/reject', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.rejectSortie);
+router.patch('/sorties/:id/take', authorize('ADMIN', 'STOCK'), ctrl.takeSortie);
 
 module.exports = router;

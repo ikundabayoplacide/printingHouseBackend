@@ -20,9 +20,10 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
     { model: User, as: 'receivedBy', attributes: ['id', 'name', 'role'] },
   ];
   const sortieIncludes = [
-    { model: Item, as: 'stockItem', attributes: ['id', 'itemName', 'unit', 'currentStock'] },
+    { model: Item, as: 'stockItem', attributes: ['id', 'itemName', 'unit', 'currentStock', 'alarmStock'] },
     { model: User, as: 'requester', attributes: ['id', 'name', 'role'] },
     { model: User, as: 'approvedBy', attributes: ['id', 'name', 'role'] },
+    { model: User, as: 'takenBy', attributes: ['id', 'name', 'role'] },
   ];
 
   // ── Items ──────────────────────────────────────────────────────────────────
@@ -168,16 +169,34 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
 
   const createSortie = async (req, res, next) => {
     try {
-      const { stockItemId, quantityOut, reason, notes, sortieDate, jobId } = req.body;
-      const item = await Item.findByPk(stockItemId);
-      if (!item) return error(res, 'Stock item not found.', 404);
+      const { stockItemId, customItemName, quantityOut, reason, notes, sortieDate, jobId } = req.body;
+
+      let item = null;
+      let resolvedStockItemId = stockItemId;
+
+      if (stockItemId) {
+        item = await Item.findByPk(stockItemId);
+        if (!item) return error(res, 'Stock item not found.', 404);
+      } else if (customItemName && customItemName.trim()) {
+        // Create a placeholder item for custom requests
+        item = await Item.create({
+          itemName: customItemName.trim(),
+          category: 'General',
+          unit: 'pcs',
+          currentStock: 0,
+          alarmStock: 5,
+        });
+        resolvedStockItemId = item.id;
+      } else {
+        return error(res, 'Either stockItemId or customItemName is required.', 400);
+      }
 
       const stockBefore = parseFloat(item.currentStock);
       const qty = parseFloat(quantityOut);
-      if (qty > stockBefore) return error(res, `Insufficient stock. Available: ${stockBefore} ${item.unit || ''}, requested: ${qty}.`, 422);
+      if (stockItemId && qty > stockBefore) return error(res, `Insufficient stock. Available: ${stockBefore} ${item.unit || ''}, requested: ${qty}.`, 422);
 
       const sortie = await Sortie.create({
-        stockItemId, requesterId: req.user.id, approvedById: null,
+        stockItemId: resolvedStockItemId, requesterId: req.user.id, approvedById: null,
         ...(jobId !== undefined && { jobId }),
         quantityOut: qty, reason: reason || null, notes: notes || null,
         status: 'pending', sortieDate: sortieDate || new Date(), stockBefore, stockAfter: stockBefore - qty,
@@ -205,13 +224,17 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
       if (sortie.status !== 'pending') return error(res, `Sortie is already ${sortie.status}.`, 409);
 
       const item = await Item.findByPk(sortie.stockItemId);
-      const stockBefore = parseFloat(item.currentStock);
+      const currentStock = parseFloat(item.currentStock);
       const qty = parseFloat(sortie.quantityOut);
-      if (qty > stockBefore) return error(res, `Insufficient stock. Available: ${stockBefore}, requested: ${qty}.`, 422);
+      const isCustomItem = parseFloat(sortie.stockBefore) === 0 && currentStock === 0;
 
-      const stockAfter = stockBefore - qty;
+      if (!isCustomItem && qty > currentStock)
+        return error(res, `Insufficient stock. Available: ${currentStock}, requested: ${qty}.`, 422);
+
+      const stockBefore = isCustomItem ? 0 : currentStock;
+      const stockAfter = isCustomItem ? 0 : currentStock - qty;
       await sortie.update({ status: 'approved', approvedById: req.user.id, stockBefore, stockAfter });
-      await item.update({ currentStock: stockAfter });
+      if (!isCustomItem) await item.update({ currentStock: stockAfter });
 
       await notify({
         createdById: req.user.id,
@@ -299,6 +322,30 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
     } catch (err) { next(err); }
   };
 
+  const takeSortie = async (req, res, next) => {
+    try {
+      const sortie = await Sortie.findByPk(req.params.id);
+      if (!sortie) return error(res, 'Sortie not found.', 404);
+      if (sortie.status !== 'approved') return error(res, `Only approved sorties can be marked as taken. Current status: ${sortie.status}.`, 409);
+
+      await sortie.update({ status: 'taken', takenById: req.user.id, takenAt: new Date() });
+
+      const item = await Item.findByPk(sortie.stockItemId);
+      await notify({
+        createdById: req.user.id,
+        title: 'Stock Items Taken',
+        message: `${req.user.name || 'Stock manager'} confirmed ${sortie.quantityOut} ${item?.unit || ''} of "${item?.itemName}" have been handed out.`,
+        type: 'GENERAL',
+        relatedEntityType: 'stockSortie',
+        relatedEntityId: sortie.id,
+        targetUserIds: [sortie.requesterId],
+      });
+
+      const updated = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
+      return success(res, updated, 'Sortie marked as taken.');
+    } catch (err) { next(err); }
+  };
+
   const deleteSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
@@ -310,7 +357,58 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
     } catch (err) { next(err); }
   };
 
-  return { getAllItems, getItemById, createItem, updateItem, deleteItem, getAllEntries, createEntry, getAllSorties, getSortieById, getMySorties, createSortie, updateSortie, deleteSortie, approveSortie, rejectSortie };
+  const createBulkSortie = async (req, res, next) => {
+    try {
+      const { items, notes } = req.body;
+      if (!Array.isArray(items) || items.length === 0)
+        return error(res, 'items array is required.', 400);
+
+      const created = [];
+      for (const row of items) {
+        const { stockItemId, customItemName, quantityOut, reason } = row;
+        let item = null;
+        let resolvedStockItemId = stockItemId;
+
+        if (stockItemId) {
+          item = await Item.findByPk(stockItemId);
+          if (!item) return error(res, `Stock item ${stockItemId} not found.`, 404);
+        } else if (customItemName && customItemName.trim()) {
+          item = await Item.create({ itemName: customItemName.trim(), category: 'General', unit: 'pcs', currentStock: 0, alarmStock: 5 });
+          resolvedStockItemId = item.id;
+        } else {
+          return error(res, 'Each item needs stockItemId or customItemName.', 400);
+        }
+
+        const stockBefore = parseFloat(item.currentStock);
+        const qty = parseFloat(quantityOut);
+        if (isNaN(qty) || qty <= 0) return error(res, 'Invalid quantity.', 422);
+        if (stockItemId && qty > stockBefore)
+          return error(res, `Insufficient stock for "${item.itemName}". Available: ${stockBefore}, requested: ${qty}.`, 422);
+
+        const sortie = await Sortie.create({
+          stockItemId: resolvedStockItemId, requesterId: req.user.id, approvedById: null,
+          quantityOut: qty, reason: reason || null, notes: notes || null,
+          status: 'pending', sortieDate: new Date(), stockBefore, stockAfter: stockBefore - qty,
+        });
+        created.push(sortie.id);
+      }
+
+      await notify({
+        createdById: req.user.id,
+        title: 'Stock Sortie Request',
+        message: `${req.user.name || 'A user'} submitted a bulk sortie request for ${created.length} item(s).`,
+        type: 'GENERAL',
+        relatedEntityType: 'stockSortie',
+        relatedEntityId: created[0],
+        targetRoles: managerRoles,
+      });
+
+      const result = await Sortie.findAll({ where: { id: created }, include: sortieIncludes, order: [['sortieDate', 'DESC']] });
+      return success(res, result, 'Bulk sortie request created successfully.', 201);
+    } catch (err) { next(err); }
+  };
+
+  return { getAllItems, getItemById, createItem, updateItem, deleteItem, getAllEntries, createEntry, getAllSorties, getSortieById, getMySorties, createSortie, createBulkSortie, updateSortie, deleteSortie, approveSortie, rejectSortie, takeSortie };
 };
 
 module.exports = createStockController;

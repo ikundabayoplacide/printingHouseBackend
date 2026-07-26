@@ -42,8 +42,8 @@ router.get('/assigned', getAssignedReports);
 router.get('/my', getMyReports);
 router.get('/', getAllReports);
 router.get('/:id', getReportById);
-router.post('/', upload.single('attachment'), createReport);
-router.put('/:id', upload.single('attachment'), updateReport);
+router.post('/', upload.array('attachments', 10), createReport);
+router.put('/:id', upload.array('attachments', 10), updateReport);
 router.delete('/:id', deleteReport);
 
 module.exports = router;

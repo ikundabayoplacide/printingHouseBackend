@@ -40,6 +40,20 @@ Report.init(
       allowNull: true,
       field: 'attachment_url',
     },
+    attachmentUrls: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: 'attachment_urls',
+      defaultValue: null,
+      get() {
+        const val = this.getDataValue('attachmentUrls');
+        if (!val) return [];
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch { return []; }
+        }
+        return Array.isArray(val) ? val : [];
+      },
+    },
     createdById: {
       type: DataTypes.UUID,
       allowNull: false,
