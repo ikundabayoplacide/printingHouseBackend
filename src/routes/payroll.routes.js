@@ -7,6 +7,7 @@ const {
   createPayroll,
   updatePayroll,
   approvePayroll,
+  rejectPayroll,
   markPayrollPaid,
   deletePayroll,
 } = require('../controllers/payroll.controller');
@@ -23,6 +24,7 @@ router.get('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), getPayrollById
 router.post('/', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), createPayrollValidation, validate, createPayroll);
 router.put('/:id', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), updatePayrollValidation, validate, updatePayroll);
 router.patch('/:id/approve', authorize('ADMIN', 'DAF', 'HR'), approvePayroll);
+router.patch('/:id/reject', authorize('ADMIN', 'DAF', 'HR'), rejectPayroll);
 router.patch('/:id/pay', authorize('ADMIN', 'DAF', 'ACCOUNTANT', 'HR'), markPayrollPaid);
 router.delete('/:id', authorize('ADMIN', 'DAF', 'HR'), deletePayroll);
 

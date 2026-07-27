@@ -153,6 +153,28 @@ const approvePayroll = async (req, res, next) => {
 };
 
 /**
+ * PATCH /api/payrolls/:id/reject
+ */
+const rejectPayroll = async (req, res, next) => {
+  try {
+    const payroll = await Payroll.findByPk(req.params.id);
+    if (!payroll) return error(res, 'Payroll not found.', 404);
+    if (payroll.status !== 'draft') {
+      return error(res, `Cannot reject a payroll with status "${payroll.status}".`, 400);
+    }
+
+    const { rejectionComment } = req.body;
+    if (!rejectionComment) return error(res, 'Rejection comment is required.', 400);
+
+    await payroll.update({ status: 'rejected', rejectionComment });
+    const updated = await Payroll.findByPk(payroll.id, { include: payrollIncludes });
+    return success(res, updated, 'Payroll rejected.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * PATCH /api/payrolls/:id/pay
  */
 const markPayrollPaid = async (req, res, next) => {
@@ -190,4 +212,4 @@ const deletePayroll = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllPayrolls, getPayrollById, createPayroll, updatePayroll, approvePayroll, markPayrollPaid, deletePayroll };
+module.exports = { getAllPayrolls, getPayrollById, createPayroll, updatePayroll, approvePayroll, rejectPayroll, markPayrollPaid, deletePayroll };

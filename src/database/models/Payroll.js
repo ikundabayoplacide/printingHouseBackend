@@ -46,11 +46,15 @@ Payroll.init(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('draft', 'approved', 'paid'),
+      type: DataTypes.ENUM('draft', 'approved', 'paid', 'rejected'),
       allowNull: false,
       defaultValue: 'draft',
     },
     notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    rejectionComment: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
