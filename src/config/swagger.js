@@ -908,6 +908,63 @@ const options = {
             data: { type: 'object' },
           },
         },
+        // ── Annual Leave ──────────────────────────────────────────────────────
+        AnnualLeave: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            fullNames: { type: 'string', example: 'ABAYISENGA Emmanuel' },
+            firstLeave: { type: 'string', nullable: true, example: '16/07/2026 - 31/07/2026' },
+            secondLeave: { type: 'string', nullable: true, example: '20/10/2026 - 30/10/2026' },
+            firstLeaveDays: { type: 'integer', nullable: true, example: 16 },
+            secondLeaveDays: { type: 'integer', nullable: true, example: 11 },
+            phone: { type: 'string', nullable: true, example: '+250788000001' },
+            docs: { type: 'string', nullable: true, description: 'Base64-encoded document or URL' },
+            status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'VIEWED'], example: 'PENDING' },
+            notes: { type: 'string', nullable: true },
+            viewedAt: { type: 'string', format: 'date-time', nullable: true },
+            approvedAt: { type: 'string', format: 'date-time', nullable: true },
+            rejectedAt: { type: 'string', format: 'date-time', nullable: true },
+            editedAt: { type: 'string', format: 'date-time', nullable: true },
+            createdById: { type: 'string', format: 'uuid', nullable: true },
+            approvedById: { type: 'string', format: 'uuid', nullable: true },
+            createdBy: { $ref: '#/components/schemas/User' },
+            approvedBy: { $ref: '#/components/schemas/User' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateAnnualLeaveRequest: {
+          type: 'object',
+          required: ['fullNames'],
+          properties: {
+            fullNames: { type: 'string', example: 'ABAYISENGA Emmanuel' },
+            firstLeave: { type: 'string', nullable: true, example: '16/07/2026 - 31/07/2026', description: 'Format: DD/MM/YYYY - DD/MM/YYYY' },
+            secondLeave: { type: 'string', nullable: true, example: '20/10/2026 - 30/10/2026', description: 'Format: DD/MM/YYYY - DD/MM/YYYY' },
+            phone: { type: 'string', nullable: true, example: '+250788000001' },
+            docs: { type: 'string', format: 'binary', nullable: true, description: 'Optional document file (multipart) or base64 string (JSON)' },
+            notes: { type: 'string', nullable: true },
+          },
+        },
+        UpdateAnnualLeaveRequest: {
+          type: 'object',
+          properties: {
+            fullNames: { type: 'string', example: 'ABAYISENGA Emmanuel' },
+            firstLeave: { type: 'string', nullable: true, example: '16/07/2026 - 31/07/2026' },
+            secondLeave: { type: 'string', nullable: true, example: '20/10/2026 - 30/10/2026' },
+            phone: { type: 'string', nullable: true },
+            docs: { type: 'string', format: 'binary', nullable: true },
+            notes: { type: 'string', nullable: true },
+          },
+        },
+        AnnualLeaveStatusRequest: {
+          type: 'object',
+          required: ['action'],
+          properties: {
+            action: { type: 'string', enum: ['approve', 'reject'], example: 'approve' },
+            notes: { type: 'string', nullable: true, example: 'Approved for the scheduled period', description: 'Required when action is reject' },
+          },
+        },
         ErrorResponse: {
           type: 'object',
           properties: {
@@ -936,6 +993,7 @@ const options = {
       { name: 'Employees', description: 'Employee management' },
       { name: 'Job Assignments', description: 'Supervisor assigns jobs to department employees' },
       { name: 'Notifications', description: 'User notifications' },
+      { name: 'Annual Leaves', description: 'Annual leave schedule management and Excel import' },
     ],
     paths: {
       // ── Auth ───────────────────────────────────────────────────────────────
@@ -3134,6 +3192,130 @@ const options = {
           },
         },
       },
+      // ── Annual Leaves ─────────────────────────────────────────────────────
+      '/api/annual-leaves': {
+        get: {
+          tags: ['Annual Leaves'],
+          summary: 'Get all annual leave records (paginated)',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+            { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } },
+            { in: 'query', name: 'status', schema: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'VIEWED'] } },
+          ],
+          responses: {
+            200: { description: 'Paginated list of annual leave records', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/PaginatedResponse' }, { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/AnnualLeave' } } } }] } } } },
+            401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Annual Leaves'],
+          summary: 'Create a new annual leave record (optionally with a document attachment)',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: { $ref: '#/components/schemas/CreateAnnualLeaveRequest' },
+              },
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateAnnualLeaveRequest' },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Annual leave record created', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/AnnualLeave' } } }] } } } },
+            422: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/annual-leaves/import': {
+        post: {
+          tags: ['Annual Leaves'],
+          summary: 'Import annual leave records from an Excel (.xlsx) or CSV file',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['file'],
+                  properties: {
+                    file: { type: 'string', format: 'binary', description: 'Excel (.xlsx) or CSV file with columns: No, Noms, Dates de congés (two date columns)' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Records imported successfully', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { type: 'object', properties: { imported: { type: 'integer', example: 26 }, records: { type: 'array', items: { $ref: '#/components/schemas/AnnualLeave' } } } } } }] } } } },
+            400: { description: 'No file uploaded', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'No valid records found or header row missing', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/annual-leaves/{id}': {
+        get: {
+          tags: ['Annual Leaves'],
+          summary: 'Get a single annual leave record by ID (marks it as viewed)',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Annual leave record', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/AnnualLeave' } } }] } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        put: {
+          tags: ['Annual Leaves'],
+          summary: 'Update an annual leave record',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': { schema: { $ref: '#/components/schemas/UpdateAnnualLeaveRequest' } },
+              'application/json': { schema: { $ref: '#/components/schemas/UpdateAnnualLeaveRequest' } },
+            },
+          },
+          responses: {
+            200: { description: 'Annual leave record updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/AnnualLeave' } } }] } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Annual Leaves'],
+          summary: 'Delete an annual leave record',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          responses: {
+            200: { description: 'Deleted successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+      '/api/annual-leaves/{id}/status': {
+        patch: {
+          tags: ['Annual Leaves'],
+          summary: 'Approve or reject an annual leave record',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AnnualLeaveStatusRequest' },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'Status updated', content: { 'application/json': { schema: { allOf: [{ $ref: '#/components/schemas/SuccessResponse' }, { type: 'object', properties: { data: { $ref: '#/components/schemas/AnnualLeave' } } }] } } } },
+            404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            422: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
+
       '/api/employees/{id}/toggle-active': {
         patch: {
           tags: ['Employees'],

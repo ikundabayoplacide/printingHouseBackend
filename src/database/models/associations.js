@@ -65,6 +65,7 @@ const ReceptionRequest = require('./ReceptionRequest');
 const ReceptionRequestItem = require('./ReceptionRequestItem');
 const ExtraWorker = require('./ExtraWorker');
 const OvertimeRequest = require('./OvertimeRequest');
+const AnnualLeave = require('./AnnualLeave');
 // ProcurementLead → User (created by)
 ProcurementLead.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(ProcurementLead, { foreignKey: 'createdById', as: 'procurementLeads' });
@@ -538,4 +539,12 @@ User.hasMany(OvertimeRequest, { foreignKey: 'registeredBy', as: 'registeredOvert
 OvertimeRequest.belongsTo(User, { foreignKey: 'approvedBy', as: 'approvedByUser' });
 User.hasMany(OvertimeRequest, { foreignKey: 'approvedBy', as: 'approvedOvertimes' });
 
-module.exports = { User, Customer, Job, Department, Notification, NotificationRead, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Proforma, ProformaItem, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead, ProcurementLeadDocument, RecoveryRecord, Outstand, CasualWorker, Payroll, BoutiqueStockItem, BoutiqueStockEntry, BoutiqueStockSortie, GeneralStockItem, GeneralStockEntry, GeneralStockSortie, BindingStockItem, BindingStockEntry, BindingStockSortie, Machine, MachineAssignment, JobSpec, JobSpecDocument, DepartmentSample, DepartmentSampleDocument, Withdrawal, StockRequest, StockRequestItem, JobDepartmentHistory, ExtraWorker, OvertimeRequest };
+// AnnualLeave → User (created by)
+AnnualLeave.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+User.hasMany(AnnualLeave, { foreignKey: 'createdById', as: 'annualLeaves' });
+
+// AnnualLeave → User (approved by)
+AnnualLeave.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+User.hasMany(AnnualLeave, { foreignKey: 'approvedById', as: 'approvedAnnualLeaves' });
+
+module.exports = { User, Customer, Job, Department, Notification, NotificationRead, Payment, BoutiqueCategory, BoutiqueProduct, BoutiqueStockMovement, StockItem, StockEntry, StockSortie, JobItem, Proforma, ProformaItem, CustomerVisit, Permission, RolePermission, Role, Invoice, EmployeeJobAssignment, MaterialRequest, MaterialRequestItem, BoutiqueStockRequest, BoutiqueStockRequestItem, BoutiqueSale, Report, Hobe, HobeSale, JobDocument, ProcurementLead, ProcurementLeadDocument, RecoveryRecord, Outstand, CasualWorker, Payroll, BoutiqueStockItem, BoutiqueStockEntry, BoutiqueStockSortie, GeneralStockItem, GeneralStockEntry, GeneralStockSortie, BindingStockItem, BindingStockEntry, BindingStockSortie, Machine, MachineAssignment, JobSpec, JobSpecDocument, DepartmentSample, DepartmentSampleDocument, Withdrawal, StockRequest, StockRequestItem, JobDepartmentHistory, ExtraWorker, OvertimeRequest, AnnualLeave };

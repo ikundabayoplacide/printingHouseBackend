@@ -58,6 +58,7 @@ const stockRequestRoutes = require('./src/routes/stockRequest.routes');
 const receptionRequestRoutes = require('./src/routes/receptionRequest.routes');
 const extraWorkerRoutes = require('./src/routes/extraWorker.routes');
 const overtimeRoutes = require('./src/routes/overtime.routes');
+const annualLeaveRoutes = require('./src/routes/annualLeave.routes');
 
 const app = express();
 
@@ -135,6 +136,7 @@ app.use('/api/stock-requests', stockRequestRoutes);
 app.use('/api/reception-requests', receptionRequestRoutes);
 app.use('/api/extra-workers', extraWorkerRoutes);
 app.use('/api/overtime', overtimeRoutes);
+app.use('/api/annual-leaves', annualLeaveRoutes);
 
 // 404 handler
 app.use(notFound);
