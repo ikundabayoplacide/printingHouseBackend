@@ -4,7 +4,7 @@ const FundConfig = require('../database/models/FundConfig');
 const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
-const { adjustBalance, recalculateBalance } = require('../utils/fundBalance');
+const { adjustBalance, recalculateBalance, computeCashierBalance } = require('../utils/fundBalance');
 const notify = require('../utils/notification.service');
 
 const userAttrs = ['id', 'name', 'email', 'role'];
@@ -41,16 +41,20 @@ const getBalance = async (req, res, next) => {
     const { sequelize } = require('../config/database');
     const config = await FundConfig.findOne({ where: { id: 1 } });
 
-    const [[paymentSum]] = await sequelize.query(`SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments`);
-    const [[withdrawalSum]] = await sequelize.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`);
-    const [[expenseSum]] = await sequelize.query(`SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`);
+    const [[paymentSum]]     = await sequelize.query(`SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments`);
+    const [[cashPaymentSum]]  = await sequelize.query(`SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments WHERE paymentMethod = 'CASH'`);
+    const [[withdrawalSum]]   = await sequelize.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`);
+    const [[expenseSum]]      = await sequelize.query(`SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`);
+
+    const totalBalance = await computeCashierBalance();
 
     return success(res, {
       initialAmount: config ? parseFloat(config.initialAmount) : 0,
       totalPaymentsIn: parseFloat(paymentSum.total),
+      totalCashPaymentsIn: parseFloat(cashPaymentSum.total),
       totalWithdrawalsIn: parseFloat(withdrawalSum.total),
       totalExpensesOut: parseFloat(expenseSum.total),
-      totalBalance: config ? parseFloat(config.totalBalance) : 0,
+      totalBalance,
     }, 'Balance retrieved.');
   } catch (err) {
     next(err);

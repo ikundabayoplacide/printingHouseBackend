@@ -50,4 +50,32 @@ const recalculateBalance = async () => {
   return { initialAmount, totalBalance };
 };
 
-module.exports = { adjustBalance, recalculateBalance };
+/**
+ * Compute cashier fund balance using CASH payments only.
+ * Does NOT persist — used only for display in getBalance.
+ */
+const computeCashierBalance = async () => {
+  const { sequelize } = require('../config/database');
+
+  const [[cashPaymentSum]] = await sequelize.query(
+    `SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments WHERE paymentMethod = 'CASH'`
+  );
+  const [[withdrawalSum]] = await sequelize.query(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`
+  );
+  const [[expenseSum]] = await sequelize.query(
+    `SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`
+  );
+
+  const config = await FundConfig.findOne({ where: { id: 1 } });
+  const initialAmount = config ? parseFloat(config.initialAmount) : 0;
+
+  return parseFloat((
+    initialAmount +
+    parseFloat(cashPaymentSum.total) +
+    parseFloat(withdrawalSum.total) -
+    parseFloat(expenseSum.total)
+  ).toFixed(2));
+};
+
+module.exports = { adjustBalance, recalculateBalance, computeCashierBalance };
