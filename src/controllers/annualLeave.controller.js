@@ -3,9 +3,61 @@ const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function parseLeaveDate(str) {
+  const [d, m, y] = str.trim().split('/');
+  return new Date(`${y}-${m}-${d}`);
+}
+
+function calcDaysRemaining(periodStr) {
+  if (!periodStr) return null;
+
+  const parts = periodStr.split(/\s[–-]\s/);
+  if (parts.length !== 2) return null;
+
+  const start = parseLeaveDate(parts[0]);
+  const end = parseLeaveDate(parts[1]);
+  if (isNaN(start) || isNaN(end)) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  if (today < start) {
+    return {
+      status: 'upcoming',
+      daysUntilStart: Math.round((start - today) / (1000 * 60 * 60 * 24)),
+      totalDays,
+    };
+  }
+
+  if (today <= end) {
+    return {
+      status: 'ongoing',
+      daysRemaining: Math.round((end - today) / (1000 * 60 * 60 * 24)) + 1,
+      totalDays,
+    };
+  }
+
+  return {
+    status: 'completed',
+    daysAgo: Math.round((today - end) / (1000 * 60 * 60 * 24)),
+    totalDays,
+  };
+}
+
+function withCountdown(record) {
+  const data = record.toJSON ? record.toJSON() : { ...record };
+  data.firstLeaveCountdown = calcDaysRemaining(data.firstLeave);
+  data.secondLeaveCountdown = calcDaysRemaining(data.secondLeave);
+  return data;
+}
+
 const annualLeaveIncludes = [
   { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'role'], required: false },
-  { model: User, as: 'approvedBy', attributes: ['id', 'name', 'email', 'role'], required: false },
 ];
 
 // ─────────────────────────────────────────────
@@ -14,18 +66,14 @@ const annualLeaveIncludes = [
 const getAllAnnualLeaves = async (req, res, next) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
-    const where = {};
-    if (req.query.status) where.status = req.query.status;
-
     const { count, rows } = await AnnualLeave.findAndCountAll({
-      where,
       offset: skip,
       limit,
       order: [['createdAt', 'DESC']],
       include: annualLeaveIncludes,
     });
 
-    return paginated(res, rows, count, page, limit);
+    return paginated(res, rows.map(withCountdown), count, page, limit);
   } catch (err) {
     next(err);
   }
@@ -41,12 +89,28 @@ const getAnnualLeaveById = async (req, res, next) => {
     });
     if (!record) return error(res, 'Annual leave record not found.', 404);
 
-    // Mark as viewed if not yet
-    if (!record.viewedAt) {
-      await record.update({ viewedAt: new Date(), status: record.status === 'PENDING' ? 'VIEWED' : record.status });
-    }
+    return success(res, withCountdown(record));
+  } catch (err) {
+    next(err);
+  }
+};
 
-    return success(res, record);
+// ─────────────────────────────────────────────
+// GET /api/annual-leaves/:id/countdown
+// ─────────────────────────────────────────────
+const getAnnualLeaveCountdown = async (req, res, next) => {
+  try {
+    const record = await AnnualLeave.findByPk(req.params.id, {
+      attributes: ['id', 'fullNames', 'firstLeave', 'secondLeave', 'firstLeaveDays', 'secondLeaveDays'],
+    });
+    if (!record) return error(res, 'Annual leave record not found.', 404);
+
+    return success(res, {
+      id: record.id,
+      fullNames: record.fullNames,
+      firstLeaveCountdown: calcDaysRemaining(record.firstLeave),
+      secondLeaveCountdown: calcDaysRemaining(record.secondLeave),
+    });
   } catch (err) {
     next(err);
   }
@@ -108,39 +172,6 @@ const updateAnnualLeave = async (req, res, next) => {
 
     const updated = await AnnualLeave.findByPk(record.id, { include: annualLeaveIncludes });
     return success(res, updated, 'Annual leave record updated successfully.');
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ─────────────────────────────────────────────
-// PATCH /api/annual-leaves/:id/status
-// Body: { action: 'approve' | 'reject', notes? }
-// ─────────────────────────────────────────────
-const updateAnnualLeaveStatus = async (req, res, next) => {
-  try {
-    const record = await AnnualLeave.findByPk(req.params.id);
-    if (!record) return error(res, 'Annual leave record not found.', 404);
-
-    const { action, notes } = req.body;
-    const normalizedAction = action ? String(action).toLowerCase().trim() : null;
-    if (!['approve', 'reject'].includes(normalizedAction))
-      return error(res, 'Action must be "approve" or "reject".', 422);
-
-    if (normalizedAction === 'reject' && !notes)
-      return error(res, 'Notes (rejection reason) are required when rejecting.', 422);
-
-    const now = new Date();
-    await record.update({
-      status: normalizedAction === 'approve' ? 'APPROVED' : 'REJECTED',
-      approvedById: req.user?.id || null,
-      approvedAt: normalizedAction === 'approve' ? now : null,
-      rejectedAt: normalizedAction === 'reject' ? now : null,
-      notes: notes || record.notes,
-    });
-
-    const updated = await AnnualLeave.findByPk(record.id, { include: annualLeaveIncludes });
-    return success(res, updated, `Annual leave record ${action}d successfully.`);
   } catch (err) {
     next(err);
   }
@@ -219,7 +250,6 @@ const importAnnualLeaves = async (req, res, next) => {
         firstLeave,
         secondLeave,
         createdById: req.user?.id || null,
-        status: 'PENDING',
       });
     }
 
@@ -245,9 +275,9 @@ const importAnnualLeaves = async (req, res, next) => {
 module.exports = {
   getAllAnnualLeaves,
   getAnnualLeaveById,
+  getAnnualLeaveCountdown,
   createAnnualLeave,
   updateAnnualLeave,
-  updateAnnualLeaveStatus,
   deleteAnnualLeave,
   importAnnualLeaves,
 };

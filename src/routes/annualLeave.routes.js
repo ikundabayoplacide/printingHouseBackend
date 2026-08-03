@@ -4,9 +4,9 @@ const router = express.Router();
 const {
   getAllAnnualLeaves,
   getAnnualLeaveById,
+  getAnnualLeaveCountdown,
   createAnnualLeave,
   updateAnnualLeave,
-  updateAnnualLeaveStatus,
   deleteAnnualLeave,
   importAnnualLeaves,
 } = require('../controllers/annualLeave.controller');
@@ -23,9 +23,9 @@ router.post('/import', authorize('ADMIN', 'HR', 'DAF'), upload.single('file'), i
 // CRUD
 router.get('/', getAllAnnualLeaves);
 router.post('/', upload.single('docs'), createAnnualLeave);
+router.get('/:id/countdown', getAnnualLeaveCountdown);
 router.get('/:id', getAnnualLeaveById);
 router.put('/:id', upload.single('docs'), updateAnnualLeave);
-router.patch('/:id/status', authorize('ADMIN', 'HR', 'DAF'), updateAnnualLeaveStatus);
 router.delete('/:id', authorize('ADMIN', 'HR'), deleteAnnualLeave);
 
 module.exports = router;

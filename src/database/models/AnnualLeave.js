@@ -81,23 +81,6 @@ AnnualLeave.init(
       type: DataTypes.TEXT('long'),
       allowNull: true,
     },
-    status: {
-      type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED', 'VIEWED'),
-      allowNull: false,
-      defaultValue: 'PENDING',
-    },
-    viewedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    approvedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    rejectedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
     editedAt: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -107,10 +90,6 @@ AnnualLeave.init(
       allowNull: true,
     },
     createdById: {
-      type: DataTypes.UUID,
-      allowNull: true,
-    },
-    approvedById: {
       type: DataTypes.UUID,
       allowNull: true,
     },

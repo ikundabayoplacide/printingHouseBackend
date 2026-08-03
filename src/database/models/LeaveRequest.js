@@ -8,7 +8,7 @@ LeaveRequest.init(
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     userId: { type: DataTypes.UUID, allowNull: false, field: 'user_id' },
     type: {
-      type: DataTypes.ENUM('ANNUAL', 'SICK', 'MATERNITY', 'PATERNITY', 'EMERGENCY', 'UNPAID', 'OTHER'),
+      type: DataTypes.ENUM('PERMISSION', 'MATERNITY', 'PATERNITY', 'CIVIL_MARRIAGE', 'ANNUAL', 'DEATH_SPOUSE', 'DEATH_CHILD', 'DEATH_FATHER', 'DEATH_MOTHER', 'DEATH_FATHER_IN_LAW', 'DEATH_MOTHER_IN_LAW', 'DEATH_GRANDPARENT'),
       allowNull: false,
     },
     startDate: { type: DataTypes.DATEONLY, allowNull: false, field: 'start_date' },
