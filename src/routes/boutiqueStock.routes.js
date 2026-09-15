@@ -7,8 +7,8 @@ const { authorize } = require('../middlewares/role.middleware');
 router.use(authenticate);
 
 // Items
-router.get('/items', authorize('ADMIN', 'STOCK', 'DAF', 'RECEPTIONIST'), ctrl.getAllItems);
-router.get('/items/:id', authorize('ADMIN', 'STOCK', 'DAF', 'RECEPTIONIST'), ctrl.getItemById);
+router.get('/items', authorize('ADMIN', 'STOCK', 'DAF', 'RECEPTIONIST', 'PRODUCTION_MANAGER'), ctrl.getAllItems);
+router.get('/items/:id', authorize('ADMIN', 'STOCK', 'DAF', 'RECEPTIONIST', 'PRODUCTION_MANAGER'), ctrl.getItemById);
 router.post('/items', authorize('ADMIN', 'STOCK'), ctrl.createItem);
 router.put('/items/:id', authorize('ADMIN', 'STOCK'), ctrl.updateItem);
 router.delete('/items/:id', authorize('ADMIN', 'STOCK'), ctrl.deleteItem);
@@ -27,14 +27,14 @@ router.post('/entries', authorize('ADMIN', 'STOCK', 'RECEPTIONIST'), ctrl.create
 
 // Sorties (OUT)
 router.get('/sorties/my', authorize('RECEPTIONIST'), ctrl.getMySorties);
-router.get('/sorties', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.getAllSorties);
-router.get('/sorties/:id', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.getSortieById);
+router.get('/sorties', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER'), ctrl.getAllSorties);
+router.get('/sorties/:id', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER'), ctrl.getSortieById);
 router.post('/sorties', authorize('RECEPTIONIST', 'STOCK'), ctrl.createSortie);
 router.post('/sorties/bulk', authorize('RECEPTIONIST', 'STOCK'), ctrl.createBulkSortie);
 router.put('/sorties/:id', authorize('RECEPTIONIST'), ctrl.updateSortie);
 router.delete('/sorties/:id', authorize('RECEPTIONIST', 'STOCK', 'DAF', 'ADMIN'), ctrl.deleteSortie);
-router.patch('/sorties/:id/approve', authorize('ADMIN', 'DAF'), ctrl.approveSortie);
-router.patch('/sorties/:id/reject', authorize('ADMIN', 'DAF'), ctrl.rejectSortie);
+router.patch('/sorties/:id/approve', authorize('ADMIN', 'DAF', 'PRODUCTION_MANAGER'), ctrl.approveSortie);
+router.patch('/sorties/:id/reject', authorize('ADMIN', 'DAF', 'PRODUCTION_MANAGER'), ctrl.rejectSortie);
 router.patch('/sorties/:id/take', authorize('ADMIN', 'STOCK'), ctrl.takeSortie);
 
 module.exports = router;

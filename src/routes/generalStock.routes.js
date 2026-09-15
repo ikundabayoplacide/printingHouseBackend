@@ -24,8 +24,8 @@ router.get('/sorties/:id', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGE
 router.post('/sorties', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES', 'STOCK'), ctrl.createSortie);
 router.post('/sorties/bulk', authorize('HOBE', 'WORKER', 'SUPERVISOR', 'RECEPTIONIST', 'SALES', 'STOCK'), ctrl.createBulkSortie);
 router.patch('/sorties/:id', authorize('WORKER', 'SUPERVISOR'), ctrl.updateSortie);
-router.patch('/sorties/:id/approve', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.approveSortie);
-router.patch('/sorties/:id/reject', authorize('ADMIN', 'STOCK', 'DAF'), ctrl.rejectSortie);
+router.patch('/sorties/:id/approve', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER'), ctrl.approveSortie);
+router.patch('/sorties/:id/reject', authorize('ADMIN', 'STOCK', 'DAF', 'PRODUCTION_MANAGER'), ctrl.rejectSortie);
 router.patch('/sorties/:id/take', authorize('ADMIN', 'STOCK'), ctrl.takeSortie);
 
 module.exports = router;

@@ -95,8 +95,8 @@ router.patch('/:id/start', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPL
 router.patch('/:id/pause', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), pauseJob);
 router.patch('/:id/resume', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), resumeJob);
 router.patch('/:id/done', authorize('ADMIN', 'SUPERVISOR', 'WORKER', 'PRINTEMPLOYEE'), markJobDone);
-router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), approveJob);
-router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR'), rejectJobValidation, validate, rejectJob);
+router.post('/:id/approve', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR', 'PRODUCTION_MANAGER'), approveJob);
+router.post('/:id/reject', authorize('ADMIN', 'SUPERVISOR', 'DAF', 'HR', 'PRODUCTION_MANAGER'), rejectJobValidation, validate, rejectJob);
 router.post('/:id/assign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, assignJob);
 router.patch('/:id/reassign', authorize('ADMIN', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), assignJobValidation, validate, reassignJob);
 router.patch('/:id/deliver', authorize('ADMIN', 'RECEPTIONIST', 'SUPERVISOR', 'SALES', 'PRODUCTION_MANAGER'), deliverJobValidation, validate, deliverJob);

@@ -23,7 +23,7 @@ router.get('/:id', getRequestById);
 router.post('/', authorize('RECEPTIONIST', 'ADMIN'), createRequest);
 router.put('/:id', authorize('RECEPTIONIST', 'ADMIN'), updateRequest);
 router.delete('/:id', authorize('RECEPTIONIST', 'STOCK', 'DAF', 'ADMIN'), deleteRequest);
-router.patch('/:id/approve', authorize('STOCK', 'ADMIN'), approveRequest);
-router.patch('/:id/reject', authorize('STOCK', 'ADMIN'), rejectRequest);
+router.patch('/:id/approve', authorize('STOCK', 'DAF', 'PRODUCTION_MANAGER', 'ADMIN'), approveRequest);
+router.patch('/:id/reject', authorize('STOCK', 'DAF', 'PRODUCTION_MANAGER', 'ADMIN'), rejectRequest);
 
 module.exports = router;
