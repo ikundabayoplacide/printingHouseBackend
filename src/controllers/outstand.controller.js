@@ -4,7 +4,7 @@ const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 const notify = require('../utils/notification.service');
-const { adjustBalance } = require('../utils/fundBalance');
+const { adjustBalance, computeCashierBalance } = require('../utils/fundBalance');
 
 const userAttrs = ['id', 'name', 'email', 'role'];
 
@@ -173,6 +173,8 @@ const approveOutstand = async (req, res, next) => {
     }
 
     await outstand.update({ status: 'approved', approvedById: req.user.id, approvedAt: new Date() });
+    // Approval means the expense has gone out, so deduct it from the stored fund balance.
+    await adjustBalance('deduct', parseFloat(outstand.totalAmount));
     const updated = await Outstand.findByPk(outstand.id, { include: outstandIncludes });
     return success(res, updated, 'Outstand approved.');
   } catch (err) {
@@ -214,14 +216,11 @@ const markAsPaid = async (req, res, next) => {
       return error(res, `Cannot mark as paid — outstand must be approved first (current: "${outstand.status}").`, 400);
     }
 
-    const amount = parseFloat(outstand.totalAmount);
     await outstand.update({ status: 'paid', paidAt: new Date() });
 
-    // Expense paid → deduct from balance
-    const newBalance = await adjustBalance('deduct', amount);
-
     const updated = await Outstand.findByPk(outstand.id, { include: outstandIncludes });
-    return success(res, { outstand: updated, totalBalance: newBalance }, 'Outstand marked as paid.');
+    // It was already deducted when approved; changing its status must not deduct twice.
+    return success(res, { outstand: updated, totalBalance: await computeCashierBalance() }, 'Outstand marked as paid.');
   } catch (err) {
     next(err);
   }
@@ -233,6 +232,9 @@ const deleteOutstand = async (req, res, next) => {
     if (!outstand) return error(res, 'Outstand not found.', 404);
     if (outstand.status === 'paid') {
       return error(res, 'Cannot delete a paid expense.', 400);
+    }
+    if (outstand.status === 'approved') {
+      await adjustBalance('add', parseFloat(outstand.totalAmount));
     }
     await outstand.destroy();
     return success(res, null, 'Outstand deleted successfully.');

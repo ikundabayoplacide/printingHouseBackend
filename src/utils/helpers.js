@@ -4,7 +4,7 @@
  */
 const generateNumber = (prefix) => {
   const date = new Date();
-  const datePart = date.toISOString().slice(0, 10).replace(/-/g, '');
+  const datePart = date.toISOString().slice(0, 10).replace(/-/g, "");
   const randomPart = Math.floor(1000 + Math.random() * 9000);
   return `${prefix}-${datePart}-${randomPart}`;
 };
@@ -14,7 +14,7 @@ const generateNumber = (prefix) => {
  */
 const getPagination = (query) => {
   const page = Math.max(1, parseInt(query.page) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 10));
+  const limit = Math.min(500, Math.max(1, parseInt(query.limit) || 10));
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 };
@@ -26,7 +26,7 @@ const buildSearchFilter = (fields, searchTerm) => {
   if (!searchTerm) return {};
   return {
     OR: fields.map((field) => ({
-      [field]: { contains: searchTerm, mode: 'insensitive' },
+      [field]: { contains: searchTerm, mode: "insensitive" },
     })),
   };
 };

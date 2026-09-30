@@ -1,7 +1,7 @@
-const { Op } = require('sequelize');
-const { success, error, paginated } = require('../utils/apiResponse');
-const { getPagination } = require('../utils/helpers');
-const notify = require('../utils/notification.service');
+const { Op } = require("sequelize");
+const { success, error, paginated } = require("../utils/apiResponse");
+const { getPagination } = require("../utils/helpers");
+const notify = require("../utils/notification.service");
 
 /**
  * Factory that returns a full set of controller functions
@@ -16,14 +16,22 @@ const notify = require('../utils/notification.service');
  */
 const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
   const entryIncludes = [
-    { model: Item, as: 'stockItem', attributes: ['id', 'itemName', 'unit', 'currentStock'] },
-    { model: User, as: 'receivedBy', attributes: ['id', 'name', 'role'] },
+    {
+      model: Item,
+      as: "stockItem",
+      attributes: ["id", "itemName", "unit", "currentStock"],
+    },
+    { model: User, as: "receivedBy", attributes: ["id", "name", "role"] },
   ];
   const sortieIncludes = [
-    { model: Item, as: 'stockItem', attributes: ['id', 'itemName', 'unit', 'currentStock', 'alarmStock'] },
-    { model: User, as: 'requester', attributes: ['id', 'name', 'role'] },
-    { model: User, as: 'approvedBy', attributes: ['id', 'name', 'role'] },
-    { model: User, as: 'takenBy', attributes: ['id', 'name', 'role'] },
+    {
+      model: Item,
+      as: "stockItem",
+      attributes: ["id", "itemName", "unit", "currentStock", "alarmStock"],
+    },
+    { model: User, as: "requester", attributes: ["id", "name", "role"] },
+    { model: User, as: "approvedBy", attributes: ["id", "name", "role"] },
+    { model: User, as: "takenBy", attributes: ["id", "name", "role"] },
   ];
 
   // ── Items ──────────────────────────────────────────────────────────────────
@@ -42,41 +50,110 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
         ];
       }
 
-      const { count, rows } = await Item.findAndCountAll({ where, offset: skip, limit, order: [['itemName', 'ASC']] });
-      const data = rows.map((i) => ({ ...i.toJSON(), stockStatus: i.stockStatus }));
-      const filtered = stockStatus ? data.filter((i) => i.stockStatus === stockStatus) : data;
+      const { count, rows } = await Item.findAndCountAll({
+        where,
+        offset: skip,
+        limit,
+        order: [["itemName", "ASC"]],
+      });
+      const data = rows.map((i) => ({
+        ...i.toJSON(),
+        stockStatus: i.stockStatus,
+      }));
+      const filtered = stockStatus
+        ? data.filter((i) => i.stockStatus === stockStatus)
+        : data;
 
-      return paginated(res, filtered, stockStatus ? filtered.length : count, page, limit);
-    } catch (err) { next(err); }
+      return paginated(
+        res,
+        filtered,
+        stockStatus ? filtered.length : count,
+        page,
+        limit,
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 
   const getItemById = async (req, res, next) => {
     try {
       const item = await Item.findByPk(req.params.id);
-      if (!item) return error(res, 'Stock item not found.', 404);
+      if (!item) return error(res, "Stock item not found.", 404);
       return success(res, { ...item.toJSON(), stockStatus: item.stockStatus });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
 
   const createItem = async (req, res, next) => {
     try {
-      const { itemName, category, unit, description, supplier, unitCost, amountPerUnit, currentStock, alarmStock } = req.body;
-      if (currentStock === undefined || currentStock === null || currentStock === '') return error(res, 'Initial stock is required.', 400);
+      const {
+        itemName,
+        category,
+        unit,
+        description,
+        supplier,
+        unitCost,
+        amountPerUnit,
+        currentStock,
+        alarmStock,
+      } = req.body;
+      if (
+        currentStock === undefined ||
+        currentStock === null ||
+        currentStock === ""
+      )
+        return error(res, "Initial stock is required.", 400);
       const parsedStock = parseFloat(currentStock);
-      if (isNaN(parsedStock)) return error(res, 'Initial stock must be a valid number.', 400);
-      const item = await Item.create({ itemName, category, unit: unit || null, description, supplier, unitCost, amountPerUnit: amountPerUnit || null, currentStock: parsedStock, alarmStock: alarmStock || 5 });
-      return success(res, { ...item.toJSON(), stockStatus: item.stockStatus }, 'Stock item created successfully.', 201);
-    } catch (err) { next(err); }
+      if (isNaN(parsedStock))
+        return error(res, "Initial stock must be a valid number.", 400);
+      const item = await Item.create({
+        itemName,
+        category,
+        unit: unit || null,
+        description,
+        supplier,
+        unitCost,
+        amountPerUnit: amountPerUnit || null,
+        currentStock: parsedStock,
+        alarmStock: alarmStock || 5,
+      });
+      return success(
+        res,
+        { ...item.toJSON(), stockStatus: item.stockStatus },
+        "Stock item created successfully.",
+        201,
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 
   const updateItem = async (req, res, next) => {
     try {
       const item = await Item.findByPk(req.params.id);
-      if (!item) return error(res, 'Stock item not found.', 404);
-      const { itemName, category, unit, description, supplier, unitCost, amountPerUnit, alarmStock, isActive, currentStock } = req.body;
+      if (!item) return error(res, "Stock item not found.", 404);
+      const {
+        itemName,
+        category,
+        unit,
+        description,
+        supplier,
+        unitCost,
+        amountPerUnit,
+        alarmStock,
+        isActive,
+        currentStock,
+      } = req.body;
       if (currentStock !== undefined) {
         const parsed = parseFloat(currentStock);
-        if (isNaN(parsed) || parsed < 0) return error(res, 'currentStock must be a valid non-negative number.', 400);
+        if (isNaN(parsed) || parsed < 0)
+          return error(
+            res,
+            "currentStock must be a valid non-negative number.",
+            400,
+          );
       }
       await item.update({
         ...(itemName !== undefined && { itemName }),
@@ -88,19 +165,29 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
         ...(amountPerUnit !== undefined && { amountPerUnit }),
         ...(alarmStock !== undefined && { alarmStock }),
         ...(isActive !== undefined && { isActive }),
-        ...(currentStock !== undefined && { currentStock: parseFloat(currentStock) }),
+        ...(currentStock !== undefined && {
+          currentStock: parseFloat(currentStock),
+        }),
       });
-      return success(res, { ...item.toJSON(), stockStatus: item.stockStatus }, 'Stock item updated successfully.');
-    } catch (err) { next(err); }
+      return success(
+        res,
+        { ...item.toJSON(), stockStatus: item.stockStatus },
+        "Stock item updated successfully.",
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 
   const deleteItem = async (req, res, next) => {
     try {
       const item = await Item.findByPk(req.params.id);
-      if (!item) return error(res, 'Stock item not found.', 404);
+      if (!item) return error(res, "Stock item not found.", 404);
       await item.destroy();
-      return success(res, null, 'Stock item deleted successfully.');
-    } catch (err) { next(err); }
+      return success(res, null, "Stock item deleted successfully.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   // ── Entries (IN) ───────────────────────────────────────────────────────────
@@ -110,30 +197,80 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
       const { page, limit, skip } = getPagination(req.query);
       const where = {};
       if (req.query.stockItemId) where.stockItemId = req.query.stockItemId;
-      const { count, rows } = await Entry.findAndCountAll({ where, offset: skip, limit, order: [['entryDate', 'DESC']], include: entryIncludes });
+      if (req.query.from || req.query.to) {
+        where.entryDate = {};
+        if (req.query.from)
+          where.entryDate[Op.gte] = new Date(`${req.query.from}T00:00:00`);
+        if (req.query.to) {
+          const toDate = new Date(`${req.query.to}T23:59:59.999`);
+          where.entryDate[Op.lte] = toDate;
+        }
+      }
+      const { count, rows } = await Entry.findAndCountAll({
+        where,
+        offset: skip,
+        limit,
+        order: [["entryDate", "DESC"]],
+        include: entryIncludes,
+      });
       return paginated(res, rows, count, page, limit);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
 
   const createEntry = async (req, res, next) => {
     try {
-      const { stockItemId, quantityIn, quantity, unitCost, supplier, referenceNo, notes, entryDate } = req.body;
+      const {
+        stockItemId,
+        quantityIn,
+        quantity,
+        unitCost,
+        supplier,
+        referenceNo,
+        notes,
+        entryDate,
+      } = req.body;
       const resolvedQty = quantityIn ?? quantity;
       const item = await Item.findByPk(stockItemId);
-      if (!item) return error(res, 'Stock item not found.', 404);
+      if (!item) return error(res, "Stock item not found.", 404);
 
       const stockBefore = parseFloat(item.currentStock);
       const qty = parseFloat(resolvedQty);
-      if (isNaN(qty)) return error(res, 'Quantity is required and must be a valid number.', 400);
+      if (isNaN(qty))
+        return error(
+          res,
+          "Quantity is required and must be a valid number.",
+          400,
+        );
       const stockAfter = stockBefore + qty;
       const totalCost = unitCost ? qty * parseFloat(unitCost) : null;
 
-      const entry = await Entry.create({ stockItemId, receivedById: req.user.id, quantityIn: qty, unitCost: unitCost || null, totalCost, supplier: supplier || item.supplier, referenceNo: referenceNo || null, notes: notes || null, entryDate: entryDate || new Date(), stockBefore, stockAfter });
-      await item.update({ currentStock: stockAfter, ...(unitCost && { unitCost }) });
+      const entry = await Entry.create({
+        stockItemId,
+        receivedById: req.user.id,
+        quantityIn: qty,
+        unitCost: unitCost || null,
+        totalCost,
+        supplier: supplier || item.supplier,
+        referenceNo: referenceNo || null,
+        notes: notes || null,
+        entryDate: entryDate || new Date(),
+        stockBefore,
+        stockAfter,
+      });
+      await item.update({
+        currentStock: stockAfter,
+        ...(unitCost && { unitCost }),
+      });
 
-      const created = await Entry.findByPk(entry.id, { include: entryIncludes });
-      return success(res, created, 'Stock entry recorded successfully.', 201);
-    } catch (err) { next(err); }
+      const created = await Entry.findByPk(entry.id, {
+        include: entryIncludes,
+      });
+      return success(res, created, "Stock entry recorded successfully.", 201);
+    } catch (err) {
+      next(err);
+    }
   };
 
   // ── Sorties (OUT) ──────────────────────────────────────────────────────────
@@ -144,17 +281,38 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
       const where = {};
       if (req.query.status) where.status = req.query.status;
       if (req.query.stockItemId) where.stockItemId = req.query.stockItemId;
-      const { count, rows } = await Sortie.findAndCountAll({ where, offset: skip, limit, order: [['sortieDate', 'DESC']], include: sortieIncludes });
+      if (req.query.from || req.query.to) {
+        where.sortieDate = {};
+        if (req.query.from)
+          where.sortieDate[Op.gte] = new Date(`${req.query.from}T00:00:00`);
+        if (req.query.to) {
+          const toDate = new Date(`${req.query.to}T23:59:59.999`);
+          where.sortieDate[Op.lte] = toDate;
+        }
+      }
+      const { count, rows } = await Sortie.findAndCountAll({
+        where,
+        offset: skip,
+        limit,
+        order: [["sortieDate", "DESC"]],
+        include: sortieIncludes,
+      });
       return paginated(res, rows, count, page, limit);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
 
   const getSortieById = async (req, res, next) => {
     try {
-      const sortie = await Sortie.findByPk(req.params.id, { include: sortieIncludes });
-      if (!sortie) return error(res, 'Sortie not found.', 404);
+      const sortie = await Sortie.findByPk(req.params.id, {
+        include: sortieIncludes,
+      });
+      if (!sortie) return error(res, "Sortie not found.", 404);
       return success(res, sortie);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
 
   const getMySorties = async (req, res, next) => {
@@ -162,86 +320,147 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
       const { page, limit, skip } = getPagination(req.query);
       const where = { requesterId: req.user.id };
       if (req.query.status) where.status = req.query.status;
-      const { count, rows } = await Sortie.findAndCountAll({ where, offset: skip, limit, order: [['sortieDate', 'DESC']], include: sortieIncludes });
+      if (req.query.from || req.query.to) {
+        where.sortieDate = {};
+        if (req.query.from)
+          where.sortieDate[Op.gte] = new Date(`${req.query.from}T00:00:00`);
+        if (req.query.to) {
+          const toDate = new Date(`${req.query.to}T23:59:59.999`);
+          where.sortieDate[Op.lte] = toDate;
+        }
+      }
+      const { count, rows } = await Sortie.findAndCountAll({
+        where,
+        offset: skip,
+        limit,
+        order: [["sortieDate", "DESC"]],
+        include: sortieIncludes,
+      });
       return paginated(res, rows, count, page, limit);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
 
   const createSortie = async (req, res, next) => {
     try {
-      const { stockItemId, customItemName, quantityOut, reason, notes, sortieDate, jobId } = req.body;
+      const {
+        stockItemId,
+        customItemName,
+        quantityOut,
+        reason,
+        notes,
+        sortieDate,
+        jobId,
+      } = req.body;
 
       let item = null;
       let resolvedStockItemId = stockItemId;
 
       if (stockItemId) {
         item = await Item.findByPk(stockItemId);
-        if (!item) return error(res, 'Stock item not found.', 404);
+        if (!item) return error(res, "Stock item not found.", 404);
       } else if (customItemName && customItemName.trim()) {
         // Create a placeholder item for custom requests
         item = await Item.create({
           itemName: customItemName.trim(),
-          category: 'General',
-          unit: 'pcs',
+          category: "General",
+          unit: "pcs",
           currentStock: 0,
           alarmStock: 5,
         });
         resolvedStockItemId = item.id;
       } else {
-        return error(res, 'Either stockItemId or customItemName is required.', 400);
+        return error(
+          res,
+          "Either stockItemId or customItemName is required.",
+          400,
+        );
       }
 
       const stockBefore = parseFloat(item.currentStock);
       const qty = parseFloat(quantityOut);
-      if (stockItemId && qty > stockBefore) return error(res, `Insufficient stock. Available: ${stockBefore} ${item.unit || ''}, requested: ${qty}.`, 422);
+      if (stockItemId && qty > stockBefore)
+        return error(
+          res,
+          `Insufficient stock. Available: ${stockBefore} ${item.unit || ""}, requested: ${qty}.`,
+          422,
+        );
 
       const sortie = await Sortie.create({
-        stockItemId: resolvedStockItemId, requesterId: req.user.id, approvedById: null,
+        stockItemId: resolvedStockItemId,
+        requesterId: req.user.id,
+        approvedById: null,
         ...(jobId !== undefined && { jobId }),
-        quantityOut: qty, reason: reason || null, notes: notes || null,
-        status: 'pending', sortieDate: sortieDate || new Date(), stockBefore, stockAfter: stockBefore - qty,
+        quantityOut: qty,
+        reason: reason || null,
+        notes: notes || null,
+        status: "pending",
+        sortieDate: sortieDate || new Date(),
+        stockBefore,
+        stockAfter: stockBefore - qty,
       });
 
       await notify({
         createdById: req.user.id,
-        title: 'Stock Sortie Request',
-        message: `${req.user.name || 'A user'} requested ${qty} ${item.unit || ''} of "${item.itemName}".`,
-        type: 'GENERAL',
-        relatedEntityType: 'stockSortie',
+        title: "Stock Sortie Request",
+        message: `${req.user.name || "A user"} requested ${qty} ${item.unit || ""} of "${item.itemName}".`,
+        type: "GENERAL",
+        relatedEntityType: "stockSortie",
         relatedEntityId: sortie.id,
         targetRoles: managerRoles,
       });
 
-      const created = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
-      return success(res, created, 'Stock sortie request created successfully.', 201);
-    } catch (err) { next(err); }
+      const created = await Sortie.findByPk(sortie.id, {
+        include: sortieIncludes,
+      });
+      return success(
+        res,
+        created,
+        "Stock sortie request created successfully.",
+        201,
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 
   const approveSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
-      if (!sortie) return error(res, 'Sortie not found.', 404);
-      if (sortie.status !== 'pending') return error(res, `Sortie is already ${sortie.status}.`, 409);
+      if (!sortie) return error(res, "Sortie not found.", 404);
+      if (sortie.status !== "pending")
+        return error(res, `Sortie is already ${sortie.status}.`, 409);
 
       const item = await Item.findByPk(sortie.stockItemId);
       const currentStock = parseFloat(item.currentStock);
       const qty = parseFloat(sortie.quantityOut);
-      const isCustomItem = parseFloat(sortie.stockBefore) === 0 && currentStock === 0;
+      const isCustomItem =
+        parseFloat(sortie.stockBefore) === 0 && currentStock === 0;
 
       if (!isCustomItem && qty > currentStock)
-        return error(res, `Insufficient stock. Available: ${currentStock}, requested: ${qty}.`, 422);
+        return error(
+          res,
+          `Insufficient stock. Available: ${currentStock}, requested: ${qty}.`,
+          422,
+        );
 
       const stockBefore = isCustomItem ? 0 : currentStock;
       const stockAfter = isCustomItem ? 0 : currentStock - qty;
-      await sortie.update({ status: 'approved', approvedById: req.user.id, stockBefore, stockAfter });
+      await sortie.update({
+        status: "approved",
+        approvedById: req.user.id,
+        stockBefore,
+        stockAfter,
+      });
       if (!isCustomItem) await item.update({ currentStock: stockAfter });
 
       await notify({
         createdById: req.user.id,
-        title: 'Stock Sortie Approved',
-        message: `Your request for ${qty} ${item.unit || ''} of "${item.itemName}" has been approved.`,
-        type: 'GENERAL',
-        relatedEntityType: 'stockSortie',
+        title: "Stock Sortie Approved",
+        message: `Your request for ${qty} ${item.unit || ""} of "${item.itemName}" has been approved.`,
+        type: "GENERAL",
+        relatedEntityType: "stockSortie",
         relatedEntityId: sortie.id,
         targetUserIds: [sortie.requesterId],
       });
@@ -249,10 +468,10 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
       if (stockAfter <= item.alarmStock) {
         await notify({
           createdById: req.user.id,
-          title: 'Low Stock Alert',
-          message: `"${item.itemName}" is running low. Current stock: ${stockAfter} ${item.unit || ''}.`,
-          type: 'GENERAL',
-          relatedEntityType: 'stockItem',
+          title: "Low Stock Alert",
+          message: `"${item.itemName}" is running low. Current stock: ${stockAfter} ${item.unit || ""}.`,
+          type: "GENERAL",
+          relatedEntityType: "stockItem",
           relatedEntityId: item.id,
           targetRoles: managerRoles,
         });
@@ -270,98 +489,145 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
           stockStatus: updatedItem.stockStatus,
         },
       };
-      return success(res, data, 'Stock sortie approved successfully.');
-    } catch (err) { next(err); }
+      return success(res, data, "Stock sortie approved successfully.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   const rejectSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
-      if (!sortie) return error(res, 'Sortie not found.', 404);
-      if (sortie.status !== 'pending') return error(res, `Sortie is already ${sortie.status}.`, 409);
+      if (!sortie) return error(res, "Sortie not found.", 404);
+      if (sortie.status !== "pending")
+        return error(res, `Sortie is already ${sortie.status}.`, 409);
 
       const { notes } = req.body;
-      await sortie.update({ status: 'rejected', approvedById: req.user.id, ...(notes && { notes }) });
+      await sortie.update({
+        status: "rejected",
+        approvedById: req.user.id,
+        ...(notes && { notes }),
+      });
 
       const item = await Item.findByPk(sortie.stockItemId);
       await notify({
         createdById: req.user.id,
-        title: 'Stock Sortie Rejected',
-        message: `Your request for ${sortie.quantityOut} ${item.unit || ''} of "${item.itemName}" has been rejected.${notes ? ` Reason: ${notes}` : ''}`,
-        type: 'GENERAL',
-        relatedEntityType: 'stockSortie',
+        title: "Stock Sortie Rejected",
+        message: `Your request for ${sortie.quantityOut} ${item.unit || ""} of "${item.itemName}" has been rejected.${notes ? ` Reason: ${notes}` : ""}`,
+        type: "GENERAL",
+        relatedEntityType: "stockSortie",
         relatedEntityId: sortie.id,
         targetUserIds: [sortie.requesterId],
       });
 
-      const updated = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
-      return success(res, updated, 'Stock sortie rejected.');
-    } catch (err) { next(err); }
+      const updated = await Sortie.findByPk(sortie.id, {
+        include: sortieIncludes,
+      });
+      return success(res, updated, "Stock sortie rejected.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   const updateSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
-      if (!sortie) return error(res, 'Sortie not found.', 404);
-      if (sortie.requesterId !== req.user.id) return error(res, 'Forbidden.', 403);
-      if (sortie.status !== 'pending') return error(res, 'Only pending sorties can be edited.', 409);
+      if (!sortie) return error(res, "Sortie not found.", 404);
+      if (sortie.requesterId !== req.user.id)
+        return error(res, "Forbidden.", 403);
+      if (sortie.status !== "pending")
+        return error(res, "Only pending sorties can be edited.", 409);
 
       const { quantityOut, reason, notes } = req.body;
       if (quantityOut !== undefined) {
         const item = await Item.findByPk(sortie.stockItemId);
         const qty = parseFloat(quantityOut);
-        if (isNaN(qty) || qty <= 0) return error(res, 'Invalid quantity.', 422);
-        if (qty > parseFloat(item.currentStock)) return error(res, `Insufficient stock. Available: ${item.currentStock}.`, 422);
-        await sortie.update({ quantityOut: qty, stockAfter: parseFloat(item.currentStock) - qty, ...(reason !== undefined && { reason }), ...(notes !== undefined && { notes }) });
+        if (isNaN(qty) || qty <= 0) return error(res, "Invalid quantity.", 422);
+        if (qty > parseFloat(item.currentStock))
+          return error(
+            res,
+            `Insufficient stock. Available: ${item.currentStock}.`,
+            422,
+          );
+        await sortie.update({
+          quantityOut: qty,
+          stockAfter: parseFloat(item.currentStock) - qty,
+          ...(reason !== undefined && { reason }),
+          ...(notes !== undefined && { notes }),
+        });
       } else {
-        await sortie.update({ ...(reason !== undefined && { reason }), ...(notes !== undefined && { notes }) });
+        await sortie.update({
+          ...(reason !== undefined && { reason }),
+          ...(notes !== undefined && { notes }),
+        });
       }
 
-      const updated = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
-      return success(res, updated, 'Sortie updated successfully.');
-    } catch (err) { next(err); }
+      const updated = await Sortie.findByPk(sortie.id, {
+        include: sortieIncludes,
+      });
+      return success(res, updated, "Sortie updated successfully.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   const takeSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
-      if (!sortie) return error(res, 'Sortie not found.', 404);
-      if (sortie.status !== 'approved') return error(res, `Only approved sorties can be marked as taken. Current status: ${sortie.status}.`, 409);
+      if (!sortie) return error(res, "Sortie not found.", 404);
+      if (sortie.status !== "approved")
+        return error(
+          res,
+          `Only approved sorties can be marked as taken. Current status: ${sortie.status}.`,
+          409,
+        );
 
-      await sortie.update({ status: 'taken', takenById: req.user.id, takenAt: new Date() });
+      await sortie.update({
+        status: "taken",
+        takenById: req.user.id,
+        takenAt: new Date(),
+      });
 
       const item = await Item.findByPk(sortie.stockItemId);
       await notify({
         createdById: req.user.id,
-        title: 'Stock Items Taken',
-        message: `${req.user.name || 'Stock manager'} confirmed ${sortie.quantityOut} ${item?.unit || ''} of "${item?.itemName}" have been handed out.`,
-        type: 'GENERAL',
-        relatedEntityType: 'stockSortie',
+        title: "Stock Items Taken",
+        message: `${req.user.name || "Stock manager"} confirmed ${sortie.quantityOut} ${item?.unit || ""} of "${item?.itemName}" have been handed out.`,
+        type: "GENERAL",
+        relatedEntityType: "stockSortie",
         relatedEntityId: sortie.id,
         targetUserIds: [sortie.requesterId],
       });
 
-      const updated = await Sortie.findByPk(sortie.id, { include: sortieIncludes });
-      return success(res, updated, 'Sortie marked as taken.');
-    } catch (err) { next(err); }
+      const updated = await Sortie.findByPk(sortie.id, {
+        include: sortieIncludes,
+      });
+      return success(res, updated, "Sortie marked as taken.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   const deleteSortie = async (req, res, next) => {
     try {
       const sortie = await Sortie.findByPk(req.params.id);
-      if (!sortie) return error(res, 'Sortie not found.', 404);
-      if (sortie.requesterId !== req.user.id) return error(res, 'Forbidden.', 403);
-      if (sortie.status !== 'pending') return error(res, 'Only pending sorties can be deleted.', 409);
+      if (!sortie) return error(res, "Sortie not found.", 404);
+      if (sortie.requesterId !== req.user.id)
+        return error(res, "Forbidden.", 403);
+      if (sortie.status !== "pending")
+        return error(res, "Only pending sorties can be deleted.", 409);
       await sortie.destroy();
-      return success(res, null, 'Sortie deleted successfully.');
-    } catch (err) { next(err); }
+      return success(res, null, "Sortie deleted successfully.");
+    } catch (err) {
+      next(err);
+    }
   };
 
   const createBulkSortie = async (req, res, next) => {
     try {
       const { items, notes } = req.body;
       if (!Array.isArray(items) || items.length === 0)
-        return error(res, 'items array is required.', 400);
+        return error(res, "items array is required.", 400);
 
       const created = [];
       for (const row of items) {
@@ -371,44 +637,95 @@ const createStockController = (Item, Entry, Sortie, User, managerRoles) => {
 
         if (stockItemId) {
           item = await Item.findByPk(stockItemId);
-          if (!item) return error(res, `Stock item ${stockItemId} not found.`, 404);
+          if (!item)
+            return error(res, `Stock item ${stockItemId} not found.`, 404);
         } else if (customItemName && customItemName.trim()) {
-          item = await Item.create({ itemName: customItemName.trim(), category: 'General', unit: 'pcs', currentStock: 0, alarmStock: 5 });
+          item = await Item.create({
+            itemName: customItemName.trim(),
+            category: "General",
+            unit: "pcs",
+            currentStock: 0,
+            alarmStock: 5,
+          });
           resolvedStockItemId = item.id;
         } else {
-          return error(res, 'Each item needs stockItemId or customItemName.', 400);
+          return error(
+            res,
+            "Each item needs stockItemId or customItemName.",
+            400,
+          );
         }
 
         const stockBefore = parseFloat(item.currentStock);
         const qty = parseFloat(quantityOut);
-        if (isNaN(qty) || qty <= 0) return error(res, 'Invalid quantity.', 422);
+        if (isNaN(qty) || qty <= 0) return error(res, "Invalid quantity.", 422);
         if (stockItemId && qty > stockBefore)
-          return error(res, `Insufficient stock for "${item.itemName}". Available: ${stockBefore}, requested: ${qty}.`, 422);
+          return error(
+            res,
+            `Insufficient stock for "${item.itemName}". Available: ${stockBefore}, requested: ${qty}.`,
+            422,
+          );
 
         const sortie = await Sortie.create({
-          stockItemId: resolvedStockItemId, requesterId: req.user.id, approvedById: null,
-          quantityOut: qty, reason: reason || null, notes: notes || null,
-          status: 'pending', sortieDate: new Date(), stockBefore, stockAfter: stockBefore - qty,
+          stockItemId: resolvedStockItemId,
+          requesterId: req.user.id,
+          approvedById: null,
+          quantityOut: qty,
+          reason: reason || null,
+          notes: notes || null,
+          status: "pending",
+          sortieDate: new Date(),
+          stockBefore,
+          stockAfter: stockBefore - qty,
         });
         created.push(sortie.id);
       }
 
       await notify({
         createdById: req.user.id,
-        title: 'Stock Sortie Request',
-        message: `${req.user.name || 'A user'} submitted a bulk sortie request for ${created.length} item(s).`,
-        type: 'GENERAL',
-        relatedEntityType: 'stockSortie',
+        title: "Stock Sortie Request",
+        message: `${req.user.name || "A user"} submitted a bulk sortie request for ${created.length} item(s).`,
+        type: "GENERAL",
+        relatedEntityType: "stockSortie",
         relatedEntityId: created[0],
         targetRoles: managerRoles,
       });
 
-      const result = await Sortie.findAll({ where: { id: created }, include: sortieIncludes, order: [['sortieDate', 'DESC']] });
-      return success(res, result, 'Bulk sortie request created successfully.', 201);
-    } catch (err) { next(err); }
+      const result = await Sortie.findAll({
+        where: { id: created },
+        include: sortieIncludes,
+        order: [["sortieDate", "DESC"]],
+      });
+      return success(
+        res,
+        result,
+        "Bulk sortie request created successfully.",
+        201,
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 
-  return { getAllItems, getItemById, createItem, updateItem, deleteItem, getAllEntries, createEntry, getAllSorties, getSortieById, getMySorties, createSortie, createBulkSortie, updateSortie, deleteSortie, approveSortie, rejectSortie, takeSortie };
+  return {
+    getAllItems,
+    getItemById,
+    createItem,
+    updateItem,
+    deleteItem,
+    getAllEntries,
+    createEntry,
+    getAllSorties,
+    getSortieById,
+    getMySorties,
+    createSortie,
+    createBulkSortie,
+    updateSortie,
+    deleteSortie,
+    approveSortie,
+    rejectSortie,
+    takeSortie,
+  };
 };
 
 module.exports = createStockController;

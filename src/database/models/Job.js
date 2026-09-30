@@ -1,5 +1,5 @@
-const { DataTypes, Model, Op } = require('sequelize');
-const { sequelize } = require('../../config/database');
+const { DataTypes, Model, Op } = require("sequelize");
+const { sequelize } = require("../../config/database");
 
 class Job extends Model {
   /**
@@ -11,18 +11,18 @@ class Job extends Model {
       where: {
         jobNumber: { [Op.like]: `JOB-${year}-%` },
       },
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       paranoid: false,
     });
 
     let nextNumber = 1;
     if (lastJob) {
-      const parts = lastJob.jobNumber.split('-');
+      const parts = lastJob.jobNumber.split("-");
       const lastSeq = parseInt(parts[2], 10);
       if (!isNaN(lastSeq)) nextNumber = lastSeq + 1;
     }
 
-    return `JOB-${year}-${String(nextNumber).padStart(3, '0')}`;
+    return `JOB-${year}-${String(nextNumber).padStart(3, "0")}`;
   }
 }
 
@@ -42,7 +42,7 @@ Job.init(
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        notEmpty: { msg: 'Job title is required' },
+        notEmpty: { msg: "Job title is required" },
       },
     },
     description: {
@@ -54,7 +54,7 @@ Job.init(
       allowNull: true,
     },
     jobFor: {
-      type: DataTypes.ENUM('hobe', 'general'),
+      type: DataTypes.ENUM("hobe", "general"),
       allowNull: true,
       defaultValue: null,
     },
@@ -62,7 +62,7 @@ Job.init(
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
-        min: { args: [1], msg: 'Quantity must be at least 1' },
+        min: { args: [1], msg: "Quantity must be at least 1" },
       },
     },
     size: {
@@ -79,20 +79,20 @@ Job.init(
     },
     status: {
       type: DataTypes.ENUM(
-        'pending',
-        'confirmed',
-        'rejected',
-        'partial-delivered',
-        'delivered',
-        'completed',
-        'verified'
+        "pending",
+        "confirmed",
+        "rejected",
+        "partial-delivered",
+        "delivered",
+        "completed",
+        "verified",
       ),
-      defaultValue: 'pending',
+      defaultValue: "pending",
       allowNull: false,
     },
     priority: {
-      type: DataTypes.ENUM('low', 'normal', 'high', 'urgent'),
-      defaultValue: 'normal',
+      type: DataTypes.ENUM("low", "normal", "high", "urgent"),
+      defaultValue: "normal",
       allowNull: false,
     },
     dueDate: {
@@ -109,30 +109,31 @@ Job.init(
     },
     state: {
       type: DataTypes.ENUM(
-        'in-composition',
-        'in-montage',
-        'in-printing',
-        'in-binding',
-        'in-packaging',
-        'quality-check',
-        'in-atelier',
-        'composition-done',
-        'montage-done',
-        'printing-done',
-        'binding-done',
-        'packaging-done',
-        'qualitycheck-done',
-        'atelier-done'
+        "in-composition",
+        "in-montage",
+        "in-printing",
+        "in-binding",
+        "in-packaging",
+        "quality-check",
+        "in-atelier",
+        "composition-done",
+        "montage-done",
+        "printing-done",
+        "binding-done",
+        "packaging-done",
+        "qualitycheck-done",
+        "atelier-done",
       ),
       allowNull: true,
       defaultValue: null,
-      comment: 'Production state — set on assignment; supervisor marks it done when department finishes',
+      comment:
+        "Production state — set on assignment; supervisor marks it done when department finishes",
     },
     inProduction: {
-      type: DataTypes.ENUM('pending', 'inprogress', 'paused', 'done'),
+      type: DataTypes.ENUM("pending", "inprogress", "paused", "done"),
       allowNull: true,
       defaultValue: null,
-      comment: 'Production progress status updated by the worker',
+      comment: "Production progress status updated by the worker",
     },
     estimatedTime: {
       type: DataTypes.STRING,
@@ -156,10 +157,17 @@ Job.init(
       defaultValue: null,
     },
     progress: {
-      type: DataTypes.ENUM('pending', 'started', 'paused', 'resumed', 'completed'),
+      type: DataTypes.ENUM(
+        "pending",
+        "started",
+        "paused",
+        "resumed",
+        "completed",
+      ),
       allowNull: true,
       defaultValue: null,
-      comment: 'Worker-driven progress state: started, paused, resumed, or completed',
+      comment:
+        "Worker-driven progress state: started, paused, resumed, or completed",
     },
     resumedAt: {
       type: DataTypes.DATE,
@@ -170,29 +178,29 @@ Job.init(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
       validate: {
-        min: { args: [0], msg: 'Amount must be a positive number' },
+        min: { args: [0], msg: "Amount must be a positive number" },
       },
     },
     paymentStatus: {
-      type: DataTypes.ENUM('unpaid', 'oncredit', 'partial', 'paid'),
-      defaultValue: 'unpaid',
+      type: DataTypes.ENUM("unpaid", "oncredit", "partial", "paid"),
+      defaultValue: "unpaid",
       allowNull: false,
     },
     quantityDelivered: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
-      comment: 'Cumulative quantity already delivered to the customer',
+      comment: "Cumulative quantity already delivered to the customer",
     },
     deliveredByName: {
       type: DataTypes.STRING,
       allowNull: true,
-      comment: 'Name of person who received the delivery',
+      comment: "Name of person who received the delivery",
     },
     deliveredByContact: {
       type: DataTypes.STRING,
       allowNull: true,
-      comment: 'Contact of person who received the delivery',
+      comment: "Contact of person who received the delivery",
     },
     departmentAssignedToId: {
       type: DataTypes.UUID,
@@ -206,34 +214,47 @@ Job.init(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    isThesisJob: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment:
+        "Indicates if this is a Print & Binding of Thesis job created by receptionist",
+    },
+    thesisOwner: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment:
+        "Thesis owner information: {fullName, phone, email, description}",
+    },
   },
   {
     sequelize,
-    modelName: 'Job',
-    tableName: 'jobs',
+    modelName: "Job",
+    tableName: "jobs",
     timestamps: true,
-  }
+  },
 );
 
 // Valid status transitions
 Job.validTransitions = {
-  pending: ['confirmed', 'rejected'],
-  confirmed: ['delivered', 'rejected'],
-  'partial-delivered': ['delivered'],
-  delivered: ['completed'],
+  pending: ["confirmed", "rejected"],
+  confirmed: ["delivered", "rejected"],
+  "partial-delivered": ["delivered"],
+  delivered: ["completed"],
   completed: [],
   verified: [],
 };
 
 // Valid state transitions (supervisor marks department work as done)
 Job.validStateTransitions = {
-  'in-composition':  'composition-done',
-  'in-montage':      'montage-done',
-  'in-printing':     'printing-done',
-  'in-binding':      'binding-done',
-  'in-packaging':    'packaging-done',
-  'quality-check':   'qualitycheck-done',
-  'in-atelier':      'atelier-done',
+  "in-composition": "composition-done",
+  "in-montage": "montage-done",
+  "in-printing": "printing-done",
+  "in-binding": "binding-done",
+  "in-packaging": "packaging-done",
+  "quality-check": "qualitycheck-done",
+  "in-atelier": "atelier-done",
 };
 
 Job.canTransition = (fromStatus, toStatus) => {

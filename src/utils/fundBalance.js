@@ -27,13 +27,13 @@ const recalculateBalance = async () => {
   const { sequelize } = require('../config/database');
 
   const [[paymentSum]] = await sequelize.query(
-    `SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments`
+    `SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments WHERE paymentMethod = 'CASH'`
   );
   const [[withdrawalSum]] = await sequelize.query(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`
   );
   const [[expenseSum]] = await sequelize.query(
-    `SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`
+    `SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status IN ('approved', 'paid')`
   );
 
   const config = await FundConfig.findOne({ where: { id: 1 } });
@@ -64,7 +64,7 @@ const computeCashierBalance = async () => {
     `SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`
   );
   const [[expenseSum]] = await sequelize.query(
-    `SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`
+    `SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status IN ('approved', 'paid')`
   );
 
   const config = await FundConfig.findOne({ where: { id: 1 } });
