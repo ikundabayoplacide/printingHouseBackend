@@ -2,43 +2,36 @@
 
 module.exports = {
   async up(queryInterface) {
-    // Step 1: expand ENUMs to include both NONE and ONCREDIT
+    // PostgreSQL enum labels are added in place; removed labels are retained.
     await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentMethod ENUM('CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD', 'NONE', 'ONCREDIT');"
+      `ALTER TYPE "enum_payments_paymentMethod" ADD VALUE IF NOT EXISTS 'ONCREDIT';`
     );
     await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentState ENUM('FULL', 'PARTIAL', 'NONE', 'ONCREDIT');"
+      `ALTER TYPE "enum_payments_paymentState" ADD VALUE IF NOT EXISTS 'ONCREDIT';`
     );
 
     // Step 2: migrate existing NONE data to ONCREDIT
     await queryInterface.sequelize.query(
-      "UPDATE payments SET paymentMethod = 'ONCREDIT' WHERE paymentMethod = 'NONE';"
+      `UPDATE payments SET "paymentMethod" = 'ONCREDIT' WHERE "paymentMethod" = 'NONE';`
     );
     await queryInterface.sequelize.query(
-      "UPDATE payments SET paymentState = 'ONCREDIT' WHERE paymentState = 'NONE';"
+      `UPDATE payments SET "paymentState" = 'ONCREDIT' WHERE "paymentState" = 'NONE';`
     );
 
-    // Step 3: remove NONE from ENUMs
     await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentMethod ENUM('CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD', 'ONCREDIT');"
-    );
-    await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentState ENUM('FULL', 'PARTIAL', 'ONCREDIT');"
-    );
-    await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN paymentStatus ENUM('unpaid', 'oncredit', 'partial', 'paid') NOT NULL DEFAULT 'unpaid';"
+      `ALTER TYPE "enum_jobs_paymentStatus" ADD VALUE IF NOT EXISTS 'oncredit';`
     );
   },
 
   async down(queryInterface) {
     await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentMethod ENUM('CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD', 'NONE');"
+      `UPDATE payments SET "paymentMethod" = 'NONE' WHERE "paymentMethod" = 'ONCREDIT';`
     );
     await queryInterface.sequelize.query(
-      "ALTER TABLE payments MODIFY COLUMN paymentState ENUM('FULL', 'PARTIAL', 'NONE');"
+      `UPDATE payments SET "paymentState" = 'NONE' WHERE "paymentState" = 'ONCREDIT';`
     );
     await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN paymentStatus ENUM('unpaid', 'partial', 'paid') NOT NULL DEFAULT 'unpaid';"
+      `UPDATE jobs SET "paymentStatus" = 'partial' WHERE "paymentStatus" = 'oncredit';`
     );
   },
 };

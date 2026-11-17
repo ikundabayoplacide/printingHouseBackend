@@ -3,7 +3,13 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const config = {
   url: process.env.DATABASE_URL,
-  dialect: 'mysql',
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: true,
+    },
+  },
   seederStorage: 'sequelize',
   migrationStorage: 'sequelize',
 };

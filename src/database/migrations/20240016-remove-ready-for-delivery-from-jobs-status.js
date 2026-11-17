@@ -6,14 +6,12 @@ module.exports = {
     await queryInterface.sequelize.query(
       "UPDATE jobs SET status = 'confirmed' WHERE status = 'ready-for-delivery';"
     );
-    await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN status ENUM('pending','confirmed','rejected','partial-delivered','delivered','completed','verified') NOT NULL DEFAULT 'pending';"
-    );
+    // PostgreSQL keeps the old enum label; rows have been migrated above.
   },
 
   async down(queryInterface) {
     await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN status ENUM('pending','confirmed','rejected','ready-for-delivery','partial-delivered','delivered','completed','verified') NOT NULL DEFAULT 'pending';"
+      `ALTER TYPE "enum_jobs_status" ADD VALUE IF NOT EXISTS 'ready-for-delivery';`
     );
   },
 };

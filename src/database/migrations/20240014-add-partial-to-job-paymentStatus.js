@@ -3,13 +3,11 @@
 module.exports = {
   async up(queryInterface) {
     await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN paymentStatus ENUM('unpaid', 'partial', 'paid') NOT NULL DEFAULT 'unpaid';"
+      `ALTER TYPE "enum_jobs_paymentStatus" ADD VALUE IF NOT EXISTS 'partial';`
     );
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query(
-      "ALTER TABLE jobs MODIFY COLUMN paymentStatus ENUM('unpaid', 'paid') NOT NULL DEFAULT 'unpaid';"
-    );
+    // PostgreSQL does not support removing individual enum labels.
   },
 };

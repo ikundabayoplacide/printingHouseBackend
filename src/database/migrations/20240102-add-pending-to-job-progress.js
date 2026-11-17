@@ -3,13 +3,11 @@
 module.exports = {
   async up(queryInterface) {
     await queryInterface.sequelize.query(
-      `ALTER TABLE jobs MODIFY COLUMN progress ENUM('pending','started','paused','resumed','completed') NULL DEFAULT NULL`
+      `ALTER TYPE "enum_jobs_progress" ADD VALUE IF NOT EXISTS 'pending';`
     );
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query(
-      `ALTER TABLE jobs MODIFY COLUMN progress ENUM('started','paused','resumed','completed') NULL DEFAULT NULL`
-    );
+    // PostgreSQL does not support removing individual enum labels.
   },
 };
