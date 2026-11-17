@@ -1,5 +1,7 @@
 const { Op } = require('sequelize');
 const Withdrawal = require('../database/models/Withdrawal');
+const Payment = require('../database/models/Payment');
+const Outstand = require('../database/models/Outstand');
 const FundConfig = require('../database/models/FundConfig');
 const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
@@ -38,22 +40,21 @@ const setConfig = async (req, res, next) => {
 
 const getBalance = async (req, res, next) => {
   try {
-    const { sequelize } = require('../config/database');
     const config = await FundConfig.findOne({ where: { id: 1 } });
 
-    const [[paymentSum]]     = await sequelize.query(`SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments`);
-    const [[cashPaymentSum]]  = await sequelize.query(`SELECT COALESCE(SUM(amountPaid), 0) AS total FROM payments WHERE paymentMethod = 'CASH'`);
-    const [[withdrawalSum]]   = await sequelize.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals`);
-    const [[expenseSum]]      = await sequelize.query(`SELECT COALESCE(SUM(totalAmount), 0) AS total FROM outstands WHERE status = 'paid'`);
+    const totalPaymentsIn      = await Payment.sum('amountPaid') || 0;
+    const totalCashPaymentsIn  = await Payment.sum('amountPaid', { where: { paymentMethod: 'CASH' } }) || 0;
+    const totalWithdrawalsIn   = await Withdrawal.sum('amount') || 0;
+    const totalExpensesOut     = await Outstand.sum('totalAmount', { where: { status: 'paid' } }) || 0;
 
     const totalBalance = await computeCashierBalance();
 
     return success(res, {
       initialAmount: config ? parseFloat(config.initialAmount) : 0,
-      totalPaymentsIn: parseFloat(paymentSum.total),
-      totalCashPaymentsIn: parseFloat(cashPaymentSum.total),
-      totalWithdrawalsIn: parseFloat(withdrawalSum.total),
-      totalExpensesOut: parseFloat(expenseSum.total),
+      totalPaymentsIn,
+      totalCashPaymentsIn,
+      totalWithdrawalsIn,
+      totalExpensesOut,
       totalBalance,
     }, 'Balance retrieved.');
   } catch (err) {

@@ -4,6 +4,16 @@ const User = require('../database/models/User');
 const { success, error, paginated } = require('../utils/apiResponse');
 const { getPagination } = require('../utils/helpers');
 const notify = require('../utils/notification.service');
+const { sequelize } = require('../config/database');
+
+// Works on both PostgreSQL (JSONB @>) and MySQL (JSON_CONTAINS)
+const jsonContains = (col, value) => {
+  const isMySQL = sequelize.getDialect() === 'mysql';
+  const [table, column] = col.split('.');
+  return isMySQL
+    ? literal(`JSON_CONTAINS(\`${table}\`.\`${column}\`, '"${value}"')`)
+    : literal(`"${table}"."${column}" @> '"${value}"'::jsonb`);
+};
 
 const reportIncludes = [
   { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'role', 'phone'] },
@@ -110,13 +120,11 @@ const getAllReports = async (req, res, next) => {
       ? {}
       : {
           [Op.or]: [
-            // Reports with a specific supervisor → only that supervisor sees it
             { supervisorId: req.user.id },
-            // Reports with no supervisorId → fall back to role-based visibleTo
             {
               supervisorId: null,
               [Op.or]: [
-                literal(`JSON_CONTAINS(\`Report\`.\`visible_to\`, '"${userRole}"')`),
+                jsonContains('reports.visible_to', userRole),
                 { visibleTo: null },
               ],
             },
@@ -153,7 +161,7 @@ const getReportById = async (req, res, next) => {
         {
           supervisorId: null,
           [Op.or]: [
-            literal(`JSON_CONTAINS(\`Report\`.\`visible_to\`, '"${userRole}"')`),
+            jsonContains('reports.visible_to', userRole),
             { visibleTo: null },
           ],
         },
@@ -283,7 +291,7 @@ const getAssignedReports = async (req, res, next) => {
           { supervisorId: req.user.id },
           {
             supervisorId: null,
-            [Op.and]: [literal(`JSON_CONTAINS(\`Report\`.\`visible_to\`, '"${userRole}"')`)],
+            [Op.and]: [jsonContains('reports.visible_to', userRole)],
           },
         ],
       },
